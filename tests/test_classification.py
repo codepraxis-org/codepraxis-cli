@@ -122,3 +122,24 @@ class TestJsonReporter:
         reporter.report(build_result([CaseStatus.PASS]))
 
         assert stream.getvalue() == ""
+
+
+class TestResponseUnwrapping:
+    """The platform wraps every response in {success, message, data}."""
+
+    def test_enveloped_responses_are_unwrapped(self):
+        from codepraxis.execution.remote.client import _unwrap
+
+        payload = {"success": True, "message": "ok", "data": {"validation_run_id": "vr_1"}}
+        assert _unwrap(payload) == {"validation_run_id": "vr_1"}
+
+    def test_null_data_becomes_an_empty_mapping(self):
+        from codepraxis.execution.remote.client import _unwrap
+
+        assert _unwrap({"success": True, "message": "ok", "data": None}) == {}
+
+    def test_bare_responses_pass_through(self):
+        """Stays correct if an endpoint ever returns an unenveloped object."""
+        from codepraxis.execution.remote.client import _unwrap
+
+        assert _unwrap({"status": "passed"}) == {"status": "passed"}

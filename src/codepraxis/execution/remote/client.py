@@ -32,6 +32,22 @@ from .config import RemoteConfig
 DEFAULT_TIMEOUT_SECONDS = 60
 
 
+def _unwrap(payload: Any) -> Any:
+    """Return the meaningful body of a platform response.
+
+    The platform wraps every response in ``{"success", "message", "data"}``.
+    Unwrapping once here keeps that envelope out of every caller, and means a
+    caller reading ``result["status"]`` gets the resource's status rather than
+    silently getting nothing.
+
+    Responses that are not enveloped are passed through untouched, so this stays
+    correct if an endpoint ever returns a bare object.
+    """
+    if isinstance(payload, dict) and "success" in payload and "data" in payload:
+        return payload.get("data") or {}
+    return payload
+
+
 class ApiClient:
     """Thin, typed wrapper over the platform's HTTP API."""
 
@@ -72,7 +88,7 @@ class ApiClient:
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:
                 payload = response.read().decode("utf-8")
-                return json.loads(payload) if payload else {}
+                return _unwrap(json.loads(payload)) if payload else {}
         except urllib.error.HTTPError as exc:
             raise self._translate(exc, method, path) from exc
         except urllib.error.URLError as exc:
