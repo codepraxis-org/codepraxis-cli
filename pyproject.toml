@@ -4,25 +4,60 @@ build-backend = "hatchling.build"
 
 [project]
 name = "codepraxis"
-version = "0.1.0"
 description = "Author and validate CodePraxis challenge packs."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Proprietary" }
+authors = [{ name = "CodePraxis" }]
+keywords = ["codepraxis", "assessment", "challenge", "authoring"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 
 # The local harness is deliberately dependency-free: it must run on an author's
 # machine with nothing but a Python interpreter. Network commands (push/publish)
-# will add an HTTP client later behind an extra.
+# may add an HTTP client behind an extra; the harness may not.
 dependencies = []
 
+# Single source of truth: praxis.__version__. Keeping a literal here as well
+# guarantees the two drift.
+dynamic = ["version"]
+
 [project.optional-dependencies]
-dev = ["pytest>=7", "ruff>=0.4"]
+dev = ["pytest>=7", "ruff>=0.4", "build>=1", "twine>=5"]
+
+[project.urls]
+Documentation = "https://docs.codepraxis.com/authoring"
 
 [project.scripts]
 praxis = "praxis.cli:main"
 
+[tool.hatch.version]
+path = "src/praxis/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/praxis"]
+
+# Explicit allow-list rather than exclusions. This package is published
+# publicly, so a new top-level directory must be opted in deliberately —
+# never swept into a release because nobody updated an ignore list.
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/praxis",
+    "tests",
+    "README.md",
+    "CONTRIBUTING.md",
+    "RELEASING.md",
+    "pyproject.toml",
+]
 
 [tool.ruff]
 line-length = 120

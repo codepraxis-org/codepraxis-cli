@@ -1,0 +1,79 @@
+name: release
+
+# Publishing is irreversible: a version number on PyPI can never be reused, even
+# after a delete. Every gate below runs before the upload step, and the upload
+# only happens for a tag.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+
+      - name: Check artifact contents
+        # The content boundary (CONTRIBUTING.md) enforced mechanically: no
+        # challenge packs, solutions, or credentials in a public artifact.
+        run: python scripts/check_artifact.py dist
+
+      - name: Validate package metadata
+        run: python -m twine check --strict dist/*
+
+      - name: Verify the wheel installs and runs
+        # Catches the failure that unit tests cannot: a package that imports in
+        # the source tree but is missing a module once installed.
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --quiet dist/*.whl
+          /tmp/smoke/bin/praxis --version
+          /tmp/smoke/bin/praxis test --help > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.target == 'pypi' && 'pypi' || github.event_name == 'push' && 'pypi' || 'testpypi' }}
+    permissions:
+      # Trusted Publishing: GitHub mints a short-lived OIDC token that PyPI
+      # verifies against the configured publisher. No API token is stored as a
+      # secret anywhere, so there is nothing to leak or rotate.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        if: inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: inputs.target != 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1

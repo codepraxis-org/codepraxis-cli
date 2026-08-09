@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every version the package claims to support in requires-python.
+        # Authors run this on whatever they have; claiming 3.9 means testing it.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: python -m pip install -e '.[dev]'
+
+      - run: python -m pytest -q
+
+      - run: python -m ruff check src tests scripts
+
+  artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build
+      # Run the boundary check on every PR, not only at release, so a violation
+      # is caught by the person who introduced it.
+      - run: python scripts/check_artifact.py dist
+      - run: python -m twine check --strict dist/*
