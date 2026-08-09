@@ -4,17 +4,16 @@ One place for auth headers, error translation and retries, so ``login``,
 ``validate --remote`` and ``publish`` behave identically and none of them
 reimplements error handling.
 
-.. note::
-   The wire contract is **provisional** — this is the specification the platform
-   endpoints are being built against. Until they exist, every call fails with a
-   clear message rather than a stack trace.
+Endpoints used, served by ``api_authoring_controller`` under ``/api/public``
+(so ``CODEPRAXIS_API_URL`` points at that prefix):
 
-Endpoints used:
+  ``GET  /me``                          -> who this key belongs to
+  ``POST /validation-runs``             -> submit a bundle, returns a run id
+  ``GET  /validation-runs/{id}``        -> poll status + result
+  ``POST /challenges``                  -> publish a validated pack
 
-  ``GET  /v1/me``                          -> who this key belongs to
-  ``POST /v1/validation-runs``             -> submit a bundle, returns a run id
-  ``GET  /v1/validation-runs/{id}``        -> poll status + result
-  ``POST /v1/challenges``                  -> publish a validated pack
+All four require an API key holding the ``challenges:write`` scope, except
+``/me`` which only requires a valid key.
 
 Uses ``urllib`` rather than ``requests`` to keep the package dependency-free.
 """

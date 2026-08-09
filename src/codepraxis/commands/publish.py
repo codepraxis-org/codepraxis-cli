@@ -73,7 +73,7 @@ def run(
         return EXIT_ABORTED
 
     payload = client.post_json(
-        "/v1/challenges",
+        "/challenges",
         {
             # No company_id: the server derives ownership from the API key.
             "name": pack.name,
@@ -116,7 +116,7 @@ def _company_name(client: ApiClient, config: RemoteConfig | None) -> str:
     """Ask the server who this key acts for; fall back to what login cached."""
     cached = config.company if config else None
     try:
-        identity = client.get("/v1/me")
+        identity = client.get("/me")
     except PraxisError:
         return cached or "your company"
     company = identity.get("company") or {}

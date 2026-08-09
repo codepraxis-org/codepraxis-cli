@@ -36,7 +36,7 @@ def run(api_url: str | None = None, token: str | None = None) -> int:
     # Verify before persisting: a stored bad key produces confusing failures
     # much later, in commands that look unrelated to authentication.
     client = ApiClient(RemoteConfig(api_url=resolved_url, token=key))
-    identity = client.get("/v1/me")
+    identity = client.get("/me")
 
     company = identity.get("company") or {}
     company_name = company.get("name") or identity.get("company_name")

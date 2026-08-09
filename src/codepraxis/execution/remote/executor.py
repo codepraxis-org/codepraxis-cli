@@ -83,7 +83,7 @@ class RemoteExecutor:
         # server can run both fixtures; the solution never reaches a
         # candidate-facing artifact.
         bundle = build_validation_bundle(pack)
-        payload = client.post_bytes("/v1/validation-runs", bundle)
+        payload = client.post_bytes("/validation-runs", bundle)
         run_id = payload.get("validation_run_id")
         if not run_id:
             raise PraxisError("The platform accepted the pack but returned no validation_run_id")
@@ -93,7 +93,7 @@ class RemoteExecutor:
     def await_result(self, client: ApiClient, run_id: str) -> dict:
         deadline = time.time() + self._timeout
         while time.time() < deadline:
-            payload = client.get(f"/v1/validation-runs/{run_id}")
+            payload = client.get(f"/validation-runs/{run_id}")
             if str(payload.get("status", "")).lower() in _TERMINAL:
                 return payload
             time.sleep(POLL_INTERVAL_SECONDS)

@@ -65,7 +65,7 @@ class FakeClient:
         self.posted: list[tuple] = []
 
     def get(self, path: str) -> dict:
-        if path == "/v1/me":
+        if path == "/me":
             return self.identity
         raise AssertionError(f"unexpected GET {path}")
 
@@ -119,7 +119,7 @@ def test_never_sends_a_company_id(tmp_path: Path):
 
     assert exit_code == 0
     path, payload = client.posted[0]
-    assert path == "/v1/challenges"
+    assert path == "/challenges"
     assert "company_id" not in payload
     assert "company" not in payload
     assert payload["validation_run_id"] == "vr_123"
@@ -149,11 +149,11 @@ class ValidatingClient(FakeClient):
         self.starter_passes = starter_passes
 
     def post_bytes(self, path: str, blob: bytes) -> dict:
-        assert path == "/v1/validation-runs"
+        assert path == "/validation-runs"
         return {"validation_run_id": "vr_remote", "status": "queued"}
 
     def get(self, path: str) -> dict:
-        if path.startswith("/v1/validation-runs/"):
+        if path.startswith("/validation-runs/"):
             starter_status = "pass" if self.starter_passes else "fail"
             return {
                 "status": "passed",

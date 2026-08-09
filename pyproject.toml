@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "codepraxis"
+name = "codepraxis-cli"
 description = "Author and validate CodePraxis challenge packs."
 readme = "README.md"
 requires-python = ">=3.9"

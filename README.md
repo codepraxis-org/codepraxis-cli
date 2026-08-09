@@ -3,7 +3,7 @@
 Author and validate CodePraxis challenge packs from your own repository.
 
 ```bash
-pip install codepraxis
+pip install codepraxis-cli
 codepraxis --login
 codepraxis validate --local my-challenge     # fast, advisory
 codepraxis --publish my-challenge            # validates in the runner, then publishes
