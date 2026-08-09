@@ -219,3 +219,33 @@ class TestExampleCommand:
         monkeypatch.delenv("CODEPRAXIS_TOKEN", raising=False)
 
         assert RemoteConfig.resolve_public().token == ""
+
+
+class TestPluginInstructions:
+    """`/plugin marketplace add` reads a bare `foo/bar` as a GitHub repo.
+
+    A relative path there fails with "Repository not found", so the printed
+    command must be one that cannot be parsed as owner/repo.
+    """
+
+    def test_marketplace_command_uses_an_absolute_path(self, tmp_path, monkeypatch):
+        from codepraxis.plugin import installer
+
+        monkeypatch.chdir(tmp_path)
+        result = installer.install(tmp_path)
+        line = next(
+            text for text in installer.describe(result).splitlines() if "marketplace add" in text
+        )
+
+        path = line.split("marketplace add", 1)[1].strip()
+        assert path.startswith("/"), f"{path!r} would be read as a GitHub owner/repo"
+        assert Path(path).is_dir()
+
+    def test_the_marketplace_manifest_is_where_the_command_points(self, tmp_path, monkeypatch):
+        from codepraxis.plugin import installer
+
+        monkeypatch.chdir(tmp_path)
+        result = installer.install(tmp_path)
+
+        assert (result.root / ".claude-plugin" / "marketplace.json").is_file()
+        assert (result.root / "codepraxis" / ".claude-plugin" / "plugin.json").is_file()

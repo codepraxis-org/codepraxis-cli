@@ -108,12 +108,16 @@ def describe(result: InstallResult) -> str:
             "",
             "Enable it in Claude Code:",
             "",
-            f"  /plugin marketplace add {relative}",
+            # The absolute path is deliberate. `/plugin marketplace add` reads a
+            # bare `foo/bar` as a GitHub owner/repo shorthand and tries to clone
+            # it, so a relative path here fails with "Repository not found". A
+            # leading slash cannot be parsed that way.
+            f"  /plugin marketplace add {result.root}",
             f"  /plugin install {PLUGIN_NAME}@{MARKETPLACE_NAME}",
             "",
             "Then:",
             "",
-            "  /codepraxis:new    scaffold a pack from a description",
+            "  /codepraxis:new         scaffold a pack from a description",
             "  /codepraxis:validate    validate a pack and fix what fails",
             "",
             "The pack-authoring skill loads automatically when Claude touches a pack.",
