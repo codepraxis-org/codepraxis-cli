@@ -18,7 +18,7 @@ Account settings → **Publishing** → *Add a new pending publisher*:
 
 | Field | Value |
 |---|---|
-| PyPI Project Name | `codepraxis-cli` |
+| PyPI Project Name | `codepraxis` |
 | Owner | `codepraxis-org` |
 | Repository name | `codepraxis-cli` |
 | Workflow name | `release.yml` |
@@ -30,13 +30,13 @@ Same form, one field different:
 
 | Field | Value |
 |---|---|
-| PyPI Project Name | `codepraxis-cli` |
+| PyPI Project Name | `codepraxis` |
 | Owner | `codepraxis-org` |
 | Repository name | `codepraxis-cli` |
 | Workflow name | `release.yml` |
 | Environment name | **`pypi`** |
 
-A *pending* publisher claims the name `codepraxis-cli` and creates the project on
+A *pending* publisher claims the name `codepraxis` and creates the project on
 first upload, so registering a placeholder release is unnecessary — but do add
 it before someone else takes the name.
 
@@ -83,7 +83,7 @@ python -m venv /tmp/smoke && /tmp/smoke/bin/pip install dist/*.whl
 
 # 4. Tag — runs every gate and publishes to TestPyPI
 git tag v0.2.0 && git push origin v0.2.0
-pip install --index-url https://test.pypi.org/simple/ codepraxis-cli==0.2.0
+pip install --index-url https://test.pypi.org/simple/ codepraxis==0.2.0
 
 # 5. Promote to PyPI, deliberately
 gh workflow run release.yml -f target=pypi
