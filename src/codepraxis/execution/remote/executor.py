@@ -3,34 +3,17 @@
 This is the authoritative tier. It runs the pack in the production runner image
 on CodePraxis infrastructure, so it exercises everything the local harness
 cannot — ``setup.sh``, the image's package set, the LLM proxy, real container
-CPU and memory, and the packaged zip layout. Only a passing remote run permits
-publishing.
+CPU and memory, and the packaged zip layout.
 
-.. note::
-   The wire contract below is **provisional** and is the specification the
-   platform endpoint is being built against. Until the server implements it,
-   this executor fails with a clear message rather than a stack trace.
-
-Contract:
-
-  ``POST {api}/v1/validation-runs``    multipart: the packed pack zip
-      -> 202 ``{"validation_run_id": "...", "status": "queued"}``
-  ``GET  {api}/v1/validation-runs/{id}``
-      -> 200 ``{"status": "queued|running|passed|failed", "result": {...}}``
-
-``result`` uses the same shape as ``codepraxis validate --local --json``, so a
-single parser serves both tiers.
+Only a passing remote run permits publishing, and the run id it returns is what
+``codepraxis --publish`` presents as evidence.
 """
 
 from __future__ import annotations
 
-import json
 import time
-import urllib.error
-import urllib.request
 from collections.abc import Sequence
 
-from ... import __version__
 from ...domain.pack import Pack
 from ...domain.results import (
     CaseResult,
@@ -42,6 +25,8 @@ from ...domain.results import (
     Severity,
 )
 from ...errors import PraxisError
+from ...packio.archive import build_validation_bundle
+from .client import ApiClient
 from .config import RemoteConfig
 
 POLL_INTERVAL_SECONDS = 3
@@ -70,74 +55,45 @@ class RemoteExecutor:
 
     def __init__(
         self,
-        config: RemoteConfig | None = None,
+        client: ApiClient | None = None,
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     ) -> None:
-        self._config = config
+        self._client = client
         self._timeout = timeout_seconds
+        #: Set after a run so `publish` can cite the validation it relied on.
+        self.last_run_id: str | None = None
 
     def supports(self, pack: Pack) -> bool:
         # The real runner supports every backend; that is the point of this tier.
         return True
 
     def execute(self, pack: Pack, fixtures: Sequence[Fixture]) -> RunResult:
-        config = self._config or RemoteConfig.resolve()
+        client = self._client or ApiClient(RemoteConfig.resolve())
         started = time.time()
 
-        run_id = self._submit(config, pack)
-        payload = self._await_result(config, run_id)
+        run_id = self.submit(client, pack)
+        payload = self.await_result(client, run_id)
 
         return self._to_result(pack, payload, (time.time() - started) * 1000)
 
-    # -- wire --------------------------------------------------------------
+    # -- steps -------------------------------------------------------------
 
-    def _headers(self, config: RemoteConfig) -> dict:
-        return {
-            "Authorization": f"Bearer {config.token}",
-            # Lets the server reject or warn on a CLI too old for the current
-            # pack contract, instead of failing somewhere obscure.
-            "X-Praxis-CLI-Version": __version__,
-        }
-
-    def _request(self, config: RemoteConfig, method: str, path: str, body: bytes | None = None) -> dict:
-        url = f"{config.api_url}{path}"
-        request = urllib.request.Request(url, data=body, method=method, headers=self._headers(config))
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")[:500]
-            if exc.code == 401:
-                raise PraxisError("Authentication failed. Run `codepraxis login` again.") from exc
-            if exc.code == 403:
-                raise PraxisError(
-                    "This API key lacks the `challenges:write` scope needed to validate packs."
-                ) from exc
-            if exc.code == 404:
-                raise PraxisError(
-                    f"Remote validation is not available at {config.api_url} "
-                    f"(404 for {path}). Check CODEPRAXIS_API_URL, or use --local for now."
-                ) from exc
-            raise PraxisError(f"{method} {path} failed with HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise PraxisError(f"Could not reach {config.api_url}: {exc.reason}") from exc
-
-    def _submit(self, config: RemoteConfig, pack: Pack) -> str:
-        from ...packio.archive import build_validation_bundle
-
-        # The bundle carries the solution alongside the pack so the server can
-        # run both fixtures; the solution never reaches a candidate artifact.
-        archive = build_validation_bundle(pack)
-        payload = self._request(config, "POST", "/v1/validation-runs", body=archive)
+    def submit(self, client: ApiClient, pack: Pack) -> str:
+        # The bundle carries the reference solution alongside the pack so the
+        # server can run both fixtures; the solution never reaches a
+        # candidate-facing artifact.
+        bundle = build_validation_bundle(pack)
+        payload = client.post_bytes("/v1/validation-runs", bundle)
         run_id = payload.get("validation_run_id")
         if not run_id:
             raise PraxisError("The platform accepted the pack but returned no validation_run_id")
-        return str(run_id)
+        self.last_run_id = str(run_id)
+        return self.last_run_id
 
-    def _await_result(self, config: RemoteConfig, run_id: str) -> dict:
+    def await_result(self, client: ApiClient, run_id: str) -> dict:
         deadline = time.time() + self._timeout
         while time.time() < deadline:
-            payload = self._request(config, "GET", f"/v1/validation-runs/{run_id}")
+            payload = client.get(f"/v1/validation-runs/{run_id}")
             if str(payload.get("status", "")).lower() in _TERMINAL:
                 return payload
             time.sleep(POLL_INTERVAL_SECONDS)

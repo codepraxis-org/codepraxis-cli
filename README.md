@@ -4,7 +4,9 @@ Author and validate CodePraxis challenge packs from your own repository.
 
 ```bash
 pip install codepraxis
-codepraxis validate --local my-challenge
+codepraxis --login
+codepraxis validate --local my-challenge     # fast, advisory
+codepraxis --publish my-challenge            # validates in the runner, then publishes
 ```
 
 ## What this is
@@ -76,12 +78,43 @@ Re-run with `--force` to overwrite an existing install.
 
 ## Authentication
 
-`--remote` needs a key:
+```bash
+codepraxis --login
+```
+
+Prompts for an API key (hidden input), verifies it against the platform, and
+stores it at `~/.config/codepraxis/config.json` with `0600` permissions. It
+prints which company the key publishes as — worth reading, because that is what
+every publish is scoped to.
+
+In CI, skip the prompt:
 
 ```bash
-export CODEPRAXIS_TOKEN=...          # or `codepraxis login` for a stored config
+export CODEPRAXIS_TOKEN=...
 export CODEPRAXIS_API_URL=...        # optional; defaults to the production API
 ```
+
+## Publishing
+
+```bash
+codepraxis --publish my-challenge            # draft, with confirmation
+codepraxis --publish my-challenge --live     # straight to candidates
+codepraxis --publish my-challenge --yes      # non-interactive, for CI
+```
+
+Publishing is deliberately strict, because a published challenge can be
+assigned to candidates immediately:
+
+- **Remote validation runs first.** Local results never qualify. Reuse an
+  earlier passing run with `--validation-run-id` if you have one.
+- **A reference solution is required.** It is what proves the challenge is
+  solvable.
+- **It publishes as a draft** unless you pass `--live`.
+- **The company comes from your API key.** The CLI never sends a company id —
+  ownership is derived server-side, so a compromised or mistyped client can't
+  publish into someone else's catalog.
+
+You'll be shown the company and asked to confirm before anything is created.
 
 ## Development
 
