@@ -11,6 +11,8 @@ Endpoints used, served by ``api_authoring_controller`` under ``/api/public``
   ``POST /validation-runs``             -> submit a bundle, returns a run id
   ``GET  /validation-runs/{id}``        -> poll status + result
   ``POST /challenges``                  -> publish a validated pack
+  ``GET  /challenges``                  -> list company challenges
+  ``PATCH /challenges/{id}``            -> edit challenge metadata
 
 All four require an API key holding the ``challenges:write`` scope, except
 ``/me`` which only requires a valid key.
@@ -110,6 +112,14 @@ class ApiClient:
     def post_json(self, path: str, payload: dict) -> dict[str, Any]:
         return self.request(
             "POST",
+            path,
+            body=json.dumps(payload).encode("utf-8"),
+            content_type="application/json",
+        )
+
+    def patch_json(self, path: str, payload: dict) -> dict[str, Any]:
+        return self.request(
+            "PATCH",
             path,
             body=json.dumps(payload).encode("utf-8"),
             content_type="application/json",

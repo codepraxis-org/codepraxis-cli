@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .commands import catalog as catalog_command
 from .commands import example as example_command
 from .commands import lint as lint_command
 from .commands import login as login_command
@@ -60,6 +61,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validate a pack in the runner, then publish it to your company.",
     )
     actions.add_argument(
+        "--list",
+        action="store_true",
+        help="List questions that exist for your company.",
+    )
+    actions.add_argument(
+        "--edit",
+        type=int,
+        metavar="CHALLENGE_ID",
+        help="Edit question metadata and open its container preview.",
+    )
+    actions.add_argument(
         "--install",
         choices=INSTALLABLES,
         metavar="TARGET",
@@ -99,7 +111,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--open",
         action="store_true",
         dest="open_browser",
-        help="With --example, open the container in your browser.",
+        help="With --example or --edit, open the container in your browser.",
+    )
+    parser.add_argument("--title", help="With --edit, update the question title.")
+    parser.add_argument("--description", help="With --edit, update the question description.")
+    parser.add_argument(
+        "--status",
+        choices=("draft", "published"),
+        help="With --edit, update whether the question is draft or published.",
+    )
+    parser.add_argument("--difficulty", type=int, choices=(1, 2, 3), help="With --edit, set difficulty.")
+    parser.add_argument("--max-time", type=int, help="With --edit, set time limit in minutes.")
+    parser.add_argument("--max-attempt", type=int, help="With --edit, set maximum attempts.")
+    parser.add_argument(
+        "--tech-stack",
+        help="With --edit, comma-separated technologies, for example 'Python,FastAPI'.",
+    )
+    parser.add_argument(
+        "--ai-enabled",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="With --edit, toggle AI assistance.",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -245,6 +277,22 @@ def _handle_new(args: argparse.Namespace) -> int:
     return 0
 
 
+def _edit_updates(args: argparse.Namespace) -> dict:
+    tech_stack = None
+    if args.tech_stack is not None:
+        tech_stack = [item.strip() for item in args.tech_stack.split(",") if item.strip()]
+    return {
+        "challenge_name": args.title,
+        "description": args.description,
+        "status": args.status,
+        "difficulty": args.difficulty,
+        "max_time": args.max_time,
+        "max_attempt": args.max_attempt,
+        "tech_stack": tech_stack,
+        "ai_enabled": args.ai_enabled,
+    }
+
+
 def _handle_install(target: str, force: bool) -> int:
     if target == "claude-plugin":
         result = installer.install(Path.cwd(), force=force)
@@ -268,6 +316,14 @@ def main(argv: list[str] | None = None) -> int:
                 assume_yes=args.yes,
                 live=args.live,
                 validation_run_id=args.validation_run_id,
+            )
+        if args.list:
+            return catalog_command.list_questions(as_json=args.json)
+        if args.edit is not None:
+            return catalog_command.edit_question(
+                challenge_id=args.edit,
+                updates=_edit_updates(args),
+                open_browser=args.open_browser,
             )
         if args.install:
             return _handle_install(args.install, args.force)

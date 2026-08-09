@@ -10,6 +10,8 @@ codepraxis lint my-challenge                 # static checks, no execution
 codepraxis validate --local my-challenge     # run it, fast and advisory
 codepraxis --login
 codepraxis --publish my-challenge            # validates in the runner, then publishes
+codepraxis --list                            # list company questions
+codepraxis --edit 123 --open                 # update metadata/open a preview container
 ```
 
 ## What this is
@@ -128,7 +130,7 @@ codepraxis --install claude-plugin
 Writes a local plugin into `.codepraxis/claude-plugin/`, then tells you the two
 commands to enable it. You get:
 
-- **`/codepraxis:new`** — scaffold a pack from a description
+- **`/codepraxis:new`** — design, build, validate, publish and return a URL
 - **`/codepraxis:validate`** — validate and fix what fails, in a loop
 - **`pack-authoring` skill** — loads automatically when Claude touches a pack,
   so it already knows the `testCases` contract and the two-fixture rule
@@ -174,6 +176,21 @@ assigned to candidates immediately:
   publish into someone else's catalog.
 
 You'll be shown the company and asked to confirm before anything is created.
+When the platform can start a preview container, `--publish` prints that URL so
+you can inspect the question immediately.
+
+## Company catalog
+
+```bash
+codepraxis --list
+codepraxis --edit 123 --title "Debug webhook delivery" --status draft
+codepraxis --edit 123 --open
+```
+
+`--list` shows the questions owned by your API key's company, including drafts.
+`--edit` updates question metadata and returns a container URL for inspection.
+Code changes still go through the pack workflow: edit locally, validate, and
+publish a new version.
 
 ## Development
 

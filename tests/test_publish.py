@@ -203,3 +203,27 @@ def test_live_publishes_immediately(tmp_path: Path):
     )
 
     assert client.posted[0][1]["status"] == "published"
+
+
+def test_prints_container_url_when_platform_returns_one(tmp_path: Path, capsys):
+    build_pack(tmp_path)
+
+    class PreviewClient(FakeClient):
+        def post_json(self, path: str, payload: dict) -> dict:
+            self.posted.append((path, payload))
+            return {
+                "challenge_id": 7,
+                "challenge_version_id": 9,
+                "container_url": "https://container.example/?folder=/home/praxis/demo",
+            }
+
+    publish.run(
+        root=tmp_path,
+        selector="demo",
+        reporter=NullReporter(),
+        assume_yes=True,
+        validation_run_id="vr_1",
+        client=PreviewClient(),
+    )
+
+    assert "https://container.example" in capsys.readouterr().out

@@ -84,11 +84,17 @@ def run(
 
     challenge_id = payload.get("challenge_id")
     version_id = payload.get("challenge_version_id")
+    container_url = payload.get("container_url")
+    preview_error = payload.get("preview_error")
     state = "published" if live else "draft"
 
     print(f"{pack.name} {state} for {company}")
     if challenge_id:
         print(f"  challenge {challenge_id}, version {version_id}")
+    if container_url:
+        print(f"  {container_url}")
+    elif preview_error:
+        print(f"  Preview container unavailable: {preview_error}")
     if not live:
         print("  Publish it to candidates from the dashboard when you are ready.")
     return EXIT_OK
