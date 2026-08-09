@@ -4,7 +4,7 @@ Author and validate CodePraxis challenge packs from your own repository.
 
 ```bash
 pip install codepraxis
-praxis test my-challenge
+codepraxis validate --local my-challenge
 ```
 
 ## What this is
@@ -13,23 +13,22 @@ A challenge pack is a directory — starter code, a test module, instructions.
 This CLI lets you keep packs in your own git repository, iterate on them with
 your own editor, and check them before they reach candidates.
 
-Three execution tiers, one result shape:
+Two tiers, one result shape:
 
 | Command | Runs | Speed | Authoritative? |
 |---|---|---|---|
-| `praxis test` | Pure-Python harness on your machine | seconds | No — advisory |
-| `praxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes — gates publish** |
-| `praxis validate --docker` | The runner image, locally | ~1 min | Optional |
+| `codepraxis validate --local` | Pure-Python harness on your machine | seconds | No — advisory |
+| `codepraxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes — gates publish** |
 
-`praxis test` reproduces how the runner loads and scores a pack, so it catches
-most authoring mistakes in the inner loop. It is **not** the container: it does
-not run `setup.sh`, does not have the image's package set, and has no LLM proxy.
-Anything it cannot check is reported as a `note` rather than silently passing.
-Publishing always requires a remote run.
+`--local` reproduces how the runner loads, orders and scores a pack, so it
+catches most authoring mistakes in the inner loop. It is **not** the container:
+it does not run `setup.sh`, does not have the image's package set, and has no
+LLM proxy. Anything it cannot check is reported as a `note` rather than
+silently passing. Publishing always requires a remote run.
 
 ## The two fixtures
 
-Every pack is run twice:
+Every pack is validated twice:
 
 - **solution** — `source/` overlaid with `solution/`. Must pass everything.
 - **starter** — `source/` alone. Must *fail*.
@@ -59,17 +58,42 @@ my-challenge/
 solution/                    # sibling, never uploaded — the reference solution
 ```
 
+## Authoring with Claude Code
+
+```bash
+codepraxis --install claude-plugin
+```
+
+Writes a local plugin into `.codepraxis/claude-plugin/`, then tells you the two
+commands to enable it. You get:
+
+- **`/codepraxis:new`** — scaffold a pack from a description
+- **`/codepraxis:validate`** — validate and fix what fails, in a loop
+- **`pack-authoring` skill** — loads automatically when Claude touches a pack,
+  so it already knows the `testCases` contract and the two-fixture rule
+
+Re-run with `--force` to overwrite an existing install.
+
+## Authentication
+
+`--remote` needs a key:
+
+```bash
+export CODEPRAXIS_TOKEN=...          # or `codepraxis login` for a stored config
+export CODEPRAXIS_API_URL=...        # optional; defaults to the production API
+```
+
 ## Development
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'
+python3.11 -m pip install -e '.[dev]'
 pytest
+ruff check src tests scripts
 ```
 
-The package itself has **no runtime dependencies**. The harness must run on an
-author's machine with nothing but a Python interpreter, so keep it that way —
-network commands may add dependencies behind an extra, the harness may not.
+The package has **no runtime dependencies**. The harness must run on an author's
+machine with nothing but a Python interpreter, so keep it that way — the remote
+tier uses `urllib` from the standard library for the same reason.
 
 ### Conformance tests
 
@@ -78,8 +102,7 @@ The harness mirrors the production runner's behaviour (`setupCodeBase.py`,
 `tests/conformance/` replays the harness across a corpus of real packs and
 asserts the expected verdicts.
 
-That corpus is **private and lives outside this repository**. Point the tests at
-a checkout:
+That corpus is **private and lives outside this repository**:
 
 ```bash
 PRAXIS_CONFORMANCE_PACKS=/path/to/question-bank pytest tests/conformance

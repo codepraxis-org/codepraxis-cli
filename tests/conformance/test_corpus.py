@@ -12,17 +12,16 @@ so they are safe to run in a public CI.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import pytest
 
-from praxis.domain.results import Fixture
-from praxis.execution.local.executor import LocalExecutor
-from praxis.packio.discovery import find_packs
-from praxis.packio.loader import load_pack
+from codepraxis.domain.results import Fixture
+from codepraxis.execution.local.executor import LocalExecutor
+from codepraxis.packio.discovery import find_packs
+from codepraxis.packio.loader import load_pack
 
 
-def _pack_dirs(corpus_root: Path) -> List[Path]:
+def _pack_dirs(corpus_root: Path) -> list[Path]:
     found = find_packs(corpus_root)
     if not found:
         pytest.skip(f"No packs discovered under {corpus_root}")
@@ -30,11 +29,11 @@ def _pack_dirs(corpus_root: Path) -> List[Path]:
 
 
 @pytest.fixture(scope="session")
-def pack_dirs(corpus_root: Path) -> List[Path]:
+def pack_dirs(corpus_root: Path) -> list[Path]:
     return _pack_dirs(corpus_root)
 
 
-def test_every_pack_loads(pack_dirs: List[Path]) -> None:
+def test_every_pack_loads(pack_dirs: list[Path]) -> None:
     """Loading must never raise: a pack that cannot load cannot be validated."""
     failures = []
     for pack_dir in pack_dirs:
@@ -45,7 +44,7 @@ def test_every_pack_loads(pack_dirs: List[Path]) -> None:
     assert not failures, "packs failed to load:\n  " + "\n  ".join(failures)
 
 
-def test_solution_passes_and_starter_fails(pack_dirs: List[Path]) -> None:
+def test_solution_passes_and_starter_fails(pack_dirs: list[Path]) -> None:
     """The core invariant every publishable pack must satisfy.
 
     Run as one test over the whole corpus rather than parametrised per pack:

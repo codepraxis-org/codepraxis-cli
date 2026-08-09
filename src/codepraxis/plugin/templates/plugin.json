@@ -1,0 +1,8 @@
+{
+  "name": "codepraxis",
+  "description": "Author and validate CodePraxis challenge packs: scaffold a pack, run the local harness, and fix what the validator reports.",
+  "version": "0.1.0",
+  "author": {
+    "name": "CodePraxis"
+  }
+}

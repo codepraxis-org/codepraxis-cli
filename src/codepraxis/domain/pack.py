@@ -6,9 +6,10 @@ in :mod:`praxis.packio`, execution in :mod:`praxis.execution`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 from . import contract
 
@@ -25,7 +26,7 @@ class Backend:
     language: str
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "Backend":
+    def from_mapping(cls, data: Mapping[str, Any]) -> Backend:
         return cls(
             backend=str(data.get("BACKEND", "")).strip().upper(),
             language=str(data.get("LANGUAGE", "")).strip().upper(),
@@ -48,7 +49,7 @@ class Pack:
     active_test_index: int
     #: Reference solution overlaid for the SOLUTION fixture. Sibling of ``root``
     #: so it is never included in the uploaded zip.
-    solution_dir: Optional[Path] = None
+    solution_dir: Path | None = None
 
     @property
     def tests_dir(self) -> Path:

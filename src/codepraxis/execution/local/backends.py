@@ -11,8 +11,8 @@ branch gets edited.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, Sequence, Tuple
 
 from ...domain import contract
 from ...domain.results import Diagnostic, Severity
@@ -25,13 +25,13 @@ class BackendAdapter:
     key: str
     #: Names injected into the test module before it is executed, mirroring the
     #: runner. Missing an injection turns into an ImportError at module scope.
-    injected_names: Tuple[str, ...] = (contract.INJECTED_EXECUTE_BIN,)
+    injected_names: tuple[str, ...] = (contract.INJECTED_EXECUTE_BIN,)
     #: False when the backend needs container-only infrastructure.
     locally_supported: bool = True
     #: Explains the gap when ``locally_supported`` is False.
     unsupported_reason: str = ""
     #: Things this backend depends on that the local tier cannot observe.
-    unverifiable: Tuple[str, ...] = ()
+    unverifiable: tuple[str, ...] = ()
 
     def diagnostics(self) -> Sequence[Diagnostic]:
         collected = []
@@ -42,7 +42,7 @@ class BackendAdapter:
                     code="backend.unsupported-locally",
                     message=(
                         f"BACKEND={self.key} cannot run in the local harness: {self.unsupported_reason}. "
-                        f"Use `praxis validate --remote`."
+                        f"Use `codepraxis validate --remote`."
                     ),
                 )
             )
@@ -89,7 +89,7 @@ _FALLBACK = BackendAdapter(
     unverifiable=("Unrecognised BACKEND; local execution is best-effort.",),
 )
 
-_REGISTRY: Dict[str, BackendAdapter] = {adapter.key: adapter for adapter in (AI, DSA, EMB, LNX)}
+_REGISTRY: dict[str, BackendAdapter] = {adapter.key: adapter for adapter in (AI, DSA, EMB, LNX)}
 
 
 def adapter_for(backend: str) -> BackendAdapter:

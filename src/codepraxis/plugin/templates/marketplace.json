@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "codepraxis-local",
+  "description": "Locally installed CodePraxis authoring tools.",
+  "owner": {
+    "name": "CodePraxis"
+  },
+  "plugins": [
+    {
+      "name": "codepraxis",
+      "description": "Author and validate CodePraxis challenge packs.",
+      "category": "development",
+      "source": "./codepraxis"
+    }
+  ]
+}

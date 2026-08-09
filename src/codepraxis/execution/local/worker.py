@@ -52,7 +52,7 @@ def _load_module(test_file, injected_names):
     def _unavailable(*_args, **_kwargs):
         raise RuntimeError(
             "This pack calls a runner-injected helper that the local harness does not "
-            "emulate. Run `praxis validate --remote` to exercise it."
+            "emulate. Run `codepraxis validate --remote` to exercise it."
         )
 
     for name in injected_names:
@@ -179,7 +179,7 @@ def main(argv):
         print("usage: worker.py <config.json> <results.json>", file=sys.stderr)
         return 2
 
-    with open(argv[1], "r", encoding="utf-8") as handle:
+    with open(argv[1], encoding="utf-8") as handle:
         config = json.load(handle)
     output_path = argv[2]
 

@@ -7,8 +7,8 @@ convention and other arrangements without hard-coding either.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List
 
 from ..domain import contract
 
@@ -67,7 +67,7 @@ def iter_packs(root: Path, max_depth: int = MAX_DEPTH) -> Iterator[Path]:
                 frontier.append((child, depth + 1))
 
 
-def find_packs(root: Path) -> List[Path]:
+def find_packs(root: Path) -> list[Path]:
     return list(iter_packs(root))
 
 

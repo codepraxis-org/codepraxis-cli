@@ -33,8 +33,8 @@ Layers, innermost first. Dependencies point inward only.
 | `commands/` | Orchestrate the above | Instantiate concrete executors or reporters |
 | `cli.py` | Parse args, inject dependencies | Contain logic |
 
-The load-bearing rule: **every executor returns the same `RunResult`.** Local,
-remote and docker tiers are interchangeable, so reporting and exit codes are
+The load-bearing rule: **every executor returns the same `RunResult`.** Local and
+remote tiers are interchangeable, so reporting and exit codes are
 written once.
 
 ### Adding things

@@ -32,26 +32,28 @@ dependencies = []
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "ruff>=0.4", "build>=1", "twine>=5"]
+# ruff is pinned exactly: its default rule set changes between releases, so a
+# floating version means lint passes locally and fails in CI (or vice versa).
+dev = ["pytest>=7", "ruff==0.16.2", "build>=1", "twine>=5"]
 
 [project.urls]
 Documentation = "https://docs.codepraxis.com/authoring"
 
 [project.scripts]
-praxis = "praxis.cli:main"
+codepraxis = "codepraxis.cli:main"
 
 [tool.hatch.version]
-path = "src/praxis/__init__.py"
+path = "src/codepraxis/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/praxis"]
+packages = ["src/codepraxis"]
 
 # Explicit allow-list rather than exclusions. This package is published
 # publicly, so a new top-level directory must be opted in deliberately —
 # never swept into a release because nobody updated an ignore list.
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/praxis",
+    "src/codepraxis",
     "tests",
     "README.md",
     "CONTRIBUTING.md",
@@ -62,6 +64,12 @@ include = [
 [tool.ruff]
 line-length = 120
 target-version = "py39"
+
+# Declared explicitly rather than inherited from ruff's defaults, which shift
+# between releases. Adding a rule should be a deliberate commit, not a side
+# effect of an upgrade.
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

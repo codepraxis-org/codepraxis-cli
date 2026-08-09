@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from praxis.errors import PackError
-from praxis.packio.toc import resolve_active_index
+from codepraxis.errors import PackError
+from codepraxis.packio.toc import resolve_active_index
 
 
 def toc(*entries):

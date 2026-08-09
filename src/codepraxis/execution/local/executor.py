@@ -14,8 +14,8 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Sequence
 
 from ...domain import contract
 from ...domain.pack import Pack
@@ -55,11 +55,11 @@ class LocalExecutor:
 
     def execute(self, pack: Pack, fixtures: Sequence[Fixture]) -> RunResult:
         adapter = backends.adapter_for(pack.backend.backend)
-        diagnostics: List[Diagnostic] = list(adapter.diagnostics())
+        diagnostics: list[Diagnostic] = list(adapter.diagnostics())
         diagnostics.extend(self._environment_diagnostics())
 
         started = time.time()
-        runs: List[FixtureRun] = []
+        runs: list[FixtureRun] = []
 
         if adapter.locally_supported:
             for fixture in fixtures:
@@ -75,7 +75,7 @@ class LocalExecutor:
 
     # -- internals ---------------------------------------------------------
 
-    def _environment_diagnostics(self) -> List[Diagnostic]:
+    def _environment_diagnostics(self) -> list[Diagnostic]:
         """Differences between this machine and the container that change results."""
         notes = [
             Diagnostic(
@@ -119,7 +119,7 @@ class LocalExecutor:
                 diagnostics=(Diagnostic(Severity.ERROR, "harness.workspace", str(exc)),),
             )
 
-        diagnostics: List[Diagnostic] = []
+        diagnostics: list[Diagnostic] = []
         if payload.get("fatal"):
             diagnostics.append(
                 Diagnostic(
@@ -146,9 +146,9 @@ class LocalExecutor:
 
         return FixtureRun(fixture=fixture, cases=cases, diagnostics=tuple(diagnostics))
 
-    def _attribute_diagnostics(self, pack: Pack, attributes: dict) -> List[Diagnostic]:
+    def _attribute_diagnostics(self, pack: Pack, attributes: dict) -> list[Diagnostic]:
         """Check the testCases surface the runner and candidate panel rely on."""
-        collected: List[Diagnostic] = []
+        collected: list[Diagnostic] = []
         location = str(pack.active_test_file)
 
         run_count = attributes.get("RUN")

@@ -115,7 +115,7 @@ class HumanReporter:
             self._line(
                 self._style.dim(
                     f"  {skipped} thing(s) this tier cannot verify — re-run with -v, "
-                    f"or use `praxis validate --remote`"
+                    f"or use `codepraxis validate --remote`"
                 )
             )
 

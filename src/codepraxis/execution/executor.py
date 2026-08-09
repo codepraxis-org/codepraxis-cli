@@ -9,7 +9,7 @@ call site.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 try:  # pragma: no cover - typing shim for Python 3.7
     from typing import Protocol, runtime_checkable
@@ -24,7 +24,7 @@ from ..domain.results import Fixture, RunResult
 class Executor(Protocol):
     """Runs a pack's tests and reports what happened."""
 
-    #: Stable identifier recorded on the result: "local", "remote", "docker".
+    #: Stable identifier recorded on the result: "local", "remote".
     name: str
 
     def supports(self, pack: Pack) -> bool:

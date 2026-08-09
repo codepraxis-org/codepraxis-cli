@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..domain import contract
 from ..domain.pack import Backend, Pack
@@ -20,7 +20,7 @@ from .toc import resolve_active_index
 SOLUTION_DIR_NAME = "solution"
 
 
-def read_json(path: Path) -> Dict[str, Any]:
+def read_json(path: Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             value = json.load(handle)
@@ -39,7 +39,7 @@ def missing_required_paths(pack_dir: Path) -> list:
     return [rel for rel in contract.REQUIRED_PACK_PATHS if not (pack_dir / rel).exists()]
 
 
-def find_solution_dir(pack_dir: Path) -> Optional[Path]:
+def find_solution_dir(pack_dir: Path) -> Path | None:
     """Locate the reference solution beside the pack.
 
     Layouts supported, in order of preference:

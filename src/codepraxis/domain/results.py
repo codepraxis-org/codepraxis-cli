@@ -8,8 +8,8 @@ across execution tiers.
 from __future__ import annotations
 
 import enum
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence
 
 
 class Severity(enum.Enum):
@@ -45,7 +45,7 @@ class Diagnostic:
     severity: Severity
     code: str
     message: str
-    location: Optional[str] = None
+    location: str | None = None
 
     def __str__(self) -> str:
         where = f" ({self.location})" if self.location else ""
@@ -81,7 +81,7 @@ class FixtureRun:
     diagnostics: Sequence[Diagnostic] = field(default_factory=tuple)
 
     @property
-    def visible(self) -> List[CaseResult]:
+    def visible(self) -> list[CaseResult]:
         return [case for case in self.cases if not case.hidden]
 
     @property
@@ -102,20 +102,20 @@ class RunResult:
     """The outcome of running a pack, from any executor."""
 
     pack_name: str
-    #: Identifies the tier that produced this: "local", "remote", "docker".
+    #: Identifies the tier that produced this: "local", "remote".
     executor: str
     runs: Sequence[FixtureRun] = field(default_factory=tuple)
     diagnostics: Sequence[Diagnostic] = field(default_factory=tuple)
     duration_ms: float = 0.0
 
-    def run_for(self, fixture: Fixture) -> Optional[FixtureRun]:
+    def run_for(self, fixture: Fixture) -> FixtureRun | None:
         for run in self.runs:
             if run.fixture is fixture:
                 return run
         return None
 
     @property
-    def errors(self) -> List[Diagnostic]:
+    def errors(self) -> list[Diagnostic]:
         collected = [d for d in self.diagnostics if d.severity is Severity.ERROR]
         for run in self.runs:
             collected.extend(d for d in run.diagnostics if d.severity is Severity.ERROR)

@@ -19,8 +19,8 @@ import re
 import sys
 import tarfile
 import zipfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Tuple
 
 #: Path fragments that indicate challenge content was swept into the build.
 FORBIDDEN_PATH_PATTERNS = (
@@ -48,7 +48,7 @@ FORBIDDEN_CONTENT = (
 TEXT_SUFFIXES = frozenset({".py", ".md", ".txt", ".toml", ".cfg", ".json", ".yaml", ".yml", ""})
 
 
-def _iter_members(archive: Path) -> Iterable[Tuple[str, bytes]]:
+def _iter_members(archive: Path) -> Iterable[tuple[str, bytes]]:
     if archive.suffix == ".whl":
         with zipfile.ZipFile(archive) as bundle:
             for info in bundle.infolist():
@@ -64,8 +64,8 @@ def _iter_members(archive: Path) -> Iterable[Tuple[str, bytes]]:
                 yield member.name, handle.read() if handle else b""
 
 
-def check(archive: Path) -> List[str]:
-    problems: List[str] = []
+def check(archive: Path) -> list[str]:
+    problems: list[str] = []
 
     for name, payload in _iter_members(archive):
         # Strip the sdist's top-level "codepraxis-1.2.3/" prefix so patterns
@@ -89,7 +89,7 @@ def check(archive: Path) -> List[str]:
     return problems
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     dist = Path(argv[1] if len(argv) > 1 else "dist")
     archives = sorted(list(dist.glob("*.whl")) + list(dist.glob("*.tar.gz")))
 
@@ -97,7 +97,7 @@ def main(argv: List[str]) -> int:
         print(f"error: no artifacts found in {dist}/ — run `python -m build` first", file=sys.stderr)
         return 2
 
-    problems: List[str] = []
+    problems: list[str] = []
     for archive in archives:
         problems.extend(check(archive))
 

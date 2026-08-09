@@ -65,12 +65,12 @@ through directly.
 
 ## Cutting a release
 
-Version lives in exactly one place: `src/praxis/__init__.py`. Hatchling reads it
+Version lives in exactly one place: `src/codepraxis/__init__.py`. Hatchling reads it
 from there, so there is nothing to keep in sync.
 
 ```bash
 # 1. Bump the version
-vim src/praxis/__init__.py          # __version__ = "0.2.0"
+vim src/codepraxis/__init__.py          # __version__ = "0.2.0"
 
 # 2. Verify locally, exactly as CI will
 python -m build
@@ -79,7 +79,7 @@ python -m twine check --strict dist/*
 
 # 3. Smoke-test the built wheel in a clean environment
 python -m venv /tmp/smoke && /tmp/smoke/bin/pip install dist/*.whl
-/tmp/smoke/bin/praxis --version
+/tmp/smoke/bin/codepraxis --version
 
 # 4. Tag — runs every gate and publishes to TestPyPI
 git tag v0.2.0 && git push origin v0.2.0
@@ -108,7 +108,7 @@ question bank is not; see CONTRIBUTING.md.
 ## Versioning
 
 Semantic versioning, where the public contract is **the CLI surface and the pack
-format** — not the Python API. `praxis.*` modules are internal and may change in
+format** — not the Python API. `codepraxis.*` modules are internal and may change in
 any release.
 
 - **patch** — bug fixes, better diagnostics
