@@ -130,6 +130,18 @@ def build_parser() -> argparse.ArgumentParser:
         dest="fixtures",
         help="Run only this fixture. Repeatable. Defaults to solution + starter.",
     )
+    check.add_argument(
+        "--llm-base-url",
+        help=(
+            "OpenAI-compatible endpoint for packs that call a model. Defaults to "
+            "OPENAI_BASE_URL. Without a key, model-dependent cases are reported "
+            "unverifiable rather than failed."
+        ),
+    )
+    check.add_argument(
+        "--llm-api-key",
+        help="API key for --llm-base-url. Defaults to OPENAI_API_KEY (preferred: keep it in the environment).",
+    )
     check.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     check.add_argument("-v", "--verbose", action="store_true", help="Show passing cases and notes.")
     check.set_defaults(handler=_handle_validate)
@@ -141,14 +153,17 @@ def _reporter(args: argparse.Namespace):
     return JsonReporter() if args.json else HumanReporter(verbose=args.verbose)
 
 
-def _build_executor(tier: str):
-    if tier == "remote":
+def _build_executor(args: argparse.Namespace):
+    if args.tier == "remote":
         # Imported lazily so a local run never pays for the network stack, and
         # a missing credential file cannot break an offline run.
         from .execution.remote.executor import RemoteExecutor
 
         return RemoteExecutor()
-    return LocalExecutor()
+    return LocalExecutor(
+        llm_base_url=getattr(args, "llm_base_url", None),
+        llm_api_key=getattr(args, "llm_api_key", None),
+    )
 
 
 def _handle_validate(args: argparse.Namespace) -> int:
@@ -156,7 +171,7 @@ def _handle_validate(args: argparse.Namespace) -> int:
     return validate_command.run(
         root=args.root or Path.cwd(),
         selector=args.selector,
-        executor=_build_executor(args.tier),
+        executor=_build_executor(args),
         reporter=_reporter(args),
         fixtures=fixtures,
     )

@@ -32,6 +32,11 @@ class BackendAdapter:
     unsupported_reason: str = ""
     #: Things this backend depends on that the local tier cannot observe.
     unverifiable: tuple[str, ...] = ()
+    #: Substrings in a failing case's output that mean "this machine lacks the
+    #: infrastructure", not "the pack is wrong". Matched case-insensitively.
+    #: Such cases are reported UNVERIFIABLE so an author is not sent chasing a
+    #: bug that only exists off-platform.
+    unverifiable_markers: tuple[str, ...] = ()
 
     def diagnostics(self) -> Sequence[Diagnostic]:
         collected = []
@@ -62,6 +67,16 @@ AI = BackendAdapter(
     unverifiable=(
         "The hosted LLM proxy at http://localhost:1010/v1 is not running locally; "
         "cases that call it will behave differently in the container.",
+    ),
+    unverifiable_markers=(
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "localhost:1010",
+        "127.0.0.1:1010",
+        "connection refused",
+        "failed to establish a new connection",
+        "max retries exceeded",
+        "llm request failed",
     ),
 )
 

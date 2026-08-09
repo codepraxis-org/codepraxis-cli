@@ -28,6 +28,10 @@ class CaseStatus(enum.Enum):
     FAIL = "fail"
     TIMEOUT = "timeout"
     ERROR = "error"
+    #: The case could not be judged here — it needs infrastructure this tier
+    #: does not have (the LLM proxy, a package installed by setup.sh). Counting
+    #: it as a failure would send authors chasing a bug that does not exist.
+    UNVERIFIABLE = "unverifiable"
 
 
 class Fixture(enum.Enum):
@@ -96,6 +100,10 @@ class FixtureRun:
     def any_passed(self) -> bool:
         return any(case.passed for case in self.cases)
 
+    @property
+    def unverifiable(self) -> list:
+        return [case for case in self.cases if case.status is CaseStatus.UNVERIFIABLE]
+
 
 @dataclass(frozen=True)
 class RunResult:
@@ -120,6 +128,16 @@ class RunResult:
         for run in self.runs:
             collected.extend(d for d in run.diagnostics if d.severity is Severity.ERROR)
         return collected
+
+    @property
+    def inconclusive(self) -> bool:
+        """At least one case needed infrastructure this tier does not have.
+
+        An inconclusive run is neither a pass nor a failure: it says nothing
+        about the pack, only about where it ran. Callers must not treat it as a
+        failure, or a perfectly good pack looks broken on the author's laptop.
+        """
+        return any(run.unverifiable for run in self.runs)
 
     @property
     def ok(self) -> bool:

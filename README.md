@@ -24,9 +24,24 @@ Two tiers, one result shape:
 
 `--local` reproduces how the runner loads, orders and scores a pack, so it
 catches most authoring mistakes in the inner loop. It is **not** the container:
-it does not run `setup.sh`, does not have the image's package set, and has no
-LLM proxy. Anything it cannot check is reported as a `note` rather than
-silently passing. Publishing always requires a remote run.
+it does not run `setup.sh` and does not have the image's package set. Anything
+it cannot check is reported as a `note` rather than silently passing.
+Publishing always requires a remote run.
+
+### Packs that call a model
+
+By default there is no model endpoint locally, so cases that need one are
+reported **unverifiable** rather than failed — a pack is not broken just because
+your laptop has no LLM proxy. Point it at a real endpoint and they run for real:
+
+```bash
+export OPENAI_API_KEY=...              # or --llm-api-key
+export OPENAI_BASE_URL=...             # or --llm-base-url
+codepraxis validate --local my-challenge
+```
+
+Once a key is configured the leniency stops: a model failure is then a real
+failure, because it can be judged.
 
 ## The two fixtures
 
@@ -44,6 +59,11 @@ askgit  (local)
   starter   0/18 passed
   PASSED  8.9s
 ```
+
+Three verdicts: **PASSED**, **FAILED**, and **INCONCLUSIVE** (this tier lacked
+the infrastructure to judge it — not a failure, and it does not fail the
+command). `--json` always emits a single document with a `packs` array, however
+many packs ran.
 
 ## Pack layout
 

@@ -39,13 +39,19 @@ def run(
         )
 
     exit_code = EXIT_OK
-    for pack_dir in pack_dirs:
-        pack = load_pack(pack_dir)
-        chosen = list(fixtures) if fixtures else _default_fixtures(pack)
-        result = executor.execute(pack, chosen)
-        reporter.report(result)
-        if not result.ok:
-            exit_code = EXIT_FAILED
+    try:
+        for pack_dir in pack_dirs:
+            pack = load_pack(pack_dir)
+            chosen = list(fixtures) if fixtures else _default_fixtures(pack)
+            result = executor.execute(pack, chosen)
+            reporter.report(result)
+            # An inconclusive run means this tier lacked the infrastructure to
+            # judge the pack, not that the pack is wrong. Failing the command
+            # would block an inner loop over something the author cannot fix.
+            if not result.ok and not result.inconclusive:
+                exit_code = EXIT_FAILED
+    finally:
+        reporter.close()
     return exit_code
 
 

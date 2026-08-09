@@ -21,3 +21,12 @@ class Reporter(Protocol):
 
     def report(self, result: RunResult) -> None:
         ...
+
+    def close(self) -> None:
+        """Flush anything buffered across multiple packs.
+
+        Line-oriented reporters do nothing here; structured ones (JSON) buffer
+        every result and emit a single document, because a stream of
+        concatenated JSON objects is not parseable.
+        """
+        ...

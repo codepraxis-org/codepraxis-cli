@@ -22,6 +22,7 @@ _STATUS_MARK = {
     CaseStatus.FAIL: "FAIL",
     CaseStatus.TIMEOUT: "TIMEOUT",
     CaseStatus.ERROR: "ERROR",
+    CaseStatus.UNVERIFIABLE: "SKIP",
 }
 
 
@@ -132,6 +133,14 @@ class HumanReporter:
             self._line(style.dim(f"  {seconds:.1f}s"))
             return
 
+        if result.inconclusive and not result.errors:
+            self._line(
+                style.warn("  INCONCLUSIVE")
+                + " some cases need infrastructure this machine lacks — use --remote"
+            )
+            self._line(style.dim(f"  {seconds:.1f}s"))
+            return
+
         if result.ok:
             self._line(style.good("  PASSED") + style.dim(f"  {seconds:.1f}s"))
         else:
@@ -147,6 +156,9 @@ class HumanReporter:
             Severity.UNVERIFIABLE: style.dim("note "),
         }[diagnostic.severity]
         self._line(f"{indent}{prefix} {diagnostic.message}")
+
+    def close(self) -> None:
+        """Nothing buffered — output is written as each pack finishes."""
 
     def _line(self, text: str) -> None:
         self._out.write(text + "\n")

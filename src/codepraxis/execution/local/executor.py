@@ -10,6 +10,7 @@ validation.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -46,9 +47,20 @@ class LocalExecutor:
         self,
         python: str = sys.executable,
         wall_clock_seconds: int = DEFAULT_WALL_CLOCK_SECONDS,
+        llm_base_url: str | None = None,
+        llm_api_key: str | None = None,
     ) -> None:
         self._python = python
         self._wall_clock = wall_clock_seconds
+        # Packs reach the model through OPENAI_BASE_URL / OPENAI_API_KEY (see the
+        # authoring guide's hosted-LLM helper). Point those at a real endpoint
+        # and AI packs become genuinely runnable here instead of unverifiable.
+        self._llm_base_url = llm_base_url or os.environ.get("OPENAI_BASE_URL")
+        self._llm_api_key = llm_api_key or os.environ.get("OPENAI_API_KEY")
+
+    @property
+    def _llm_configured(self) -> bool:
+        return bool(self._llm_api_key)
 
     def supports(self, pack: Pack) -> bool:
         return backends.adapter_for(pack.backend.backend).locally_supported
@@ -96,6 +108,18 @@ class LocalExecutor:
                 ),
             ),
         ]
+        if self._llm_configured:
+            notes.append(
+                Diagnostic(
+                    severity=Severity.WARNING,
+                    code="local.llm-endpoint",
+                    message=(
+                        f"Model calls go to {self._llm_base_url or 'the default OpenAI endpoint'}, "
+                        f"not the container's proxy. Behaviour and cost may differ."
+                    ),
+                )
+            )
+
         if not hasattr(__import__("signal"), "SIGALRM"):
             notes.append(
                 Diagnostic(
@@ -135,7 +159,7 @@ class LocalExecutor:
         cases = tuple(
             CaseResult(
                 name=case["name"],
-                status=_STATUS_MAP.get(case["status"], CaseStatus.ERROR),
+                status=self._classify(case, adapter, self._llm_configured),
                 expected=case.get("expected", ""),
                 output=case.get("output", ""),
                 duration_ms=float(case.get("duration_ms", 0.0)),
@@ -144,7 +168,39 @@ class LocalExecutor:
             for case in payload.get("cases", [])
         )
 
+        if any(case.status is CaseStatus.UNVERIFIABLE for case in cases):
+            diagnostics.append(
+                Diagnostic(
+                    severity=Severity.UNVERIFIABLE,
+                    code="local.missing-infrastructure",
+                    message=(
+                        "Some cases need infrastructure this machine does not have "
+                        "(typically the LLM proxy). They are reported as unverifiable "
+                        "rather than failed — run `codepraxis validate --remote` to judge them."
+                    ),
+                )
+            )
+
         return FixtureRun(fixture=fixture, cases=cases, diagnostics=tuple(diagnostics))
+
+    @staticmethod
+    def _classify(case: dict, adapter: backends.BackendAdapter, llm_configured: bool) -> CaseStatus:
+        """Map a worker result to a status, demoting infrastructure failures.
+
+        A case that failed only because no model endpoint is reachable says
+        nothing about the pack, so it is reported UNVERIFIABLE rather than FAIL.
+
+        Once an endpoint IS configured the demotion stops: a failure then is a
+        real failure, and hiding it would defeat the point of running at all.
+        """
+        status = _STATUS_MAP.get(case.get("status", ""), CaseStatus.ERROR)
+        if status is CaseStatus.PASS or not adapter.unverifiable_markers or llm_configured:
+            return status
+
+        haystack = f"{case.get('output', '')}".lower()
+        if any(marker.lower() in haystack for marker in adapter.unverifiable_markers):
+            return CaseStatus.UNVERIFIABLE
+        return status
 
     def _attribute_diagnostics(self, pack: Pack, attributes: dict) -> list[Diagnostic]:
         """Check the testCases surface the runner and candidate panel rely on."""
@@ -226,6 +282,12 @@ class LocalExecutor:
                 encoding="utf-8",
             )
 
+            worker_env = dict(os.environ)
+            if self._llm_base_url:
+                worker_env["OPENAI_BASE_URL"] = self._llm_base_url
+            if self._llm_api_key:
+                worker_env["OPENAI_API_KEY"] = self._llm_api_key
+
             try:
                 completed = subprocess.run(
                     [self._python, str(WORKER), str(config_path), str(results_path)],
@@ -233,6 +295,7 @@ class LocalExecutor:
                     capture_output=True,
                     text=True,
                     timeout=self._wall_clock,
+                    env=worker_env,
                 )
             except subprocess.TimeoutExpired:
                 return {
