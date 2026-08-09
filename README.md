@@ -4,8 +4,11 @@ Author and validate CodePraxis challenge packs from your own repository.
 
 ```bash
 pip install codepraxis
+codepraxis --example                         # see a real challenge, no account needed
+codepraxis new my-challenge                  # scaffold one that already validates
+codepraxis lint my-challenge                 # static checks, no execution
+codepraxis validate --local my-challenge     # run it, fast and advisory
 codepraxis --login
-codepraxis validate --local my-challenge     # fast, advisory
 codepraxis --publish my-challenge            # validates in the runner, then publishes
 ```
 
@@ -42,6 +45,42 @@ codepraxis validate --local my-challenge
 
 Once a key is configured the leniency stops: a model failure is then a real
 failure, because it can be judged.
+
+## Try it first
+
+```bash
+codepraxis --example
+```
+
+Starts a throwaway container with the featured challenge already cloned into it
+and prints a URL. That is exactly what a candidate sees. No login, no account,
+nothing recorded as an attempt. Add `--open` to launch it in your browser.
+
+## Starting a new pack
+
+```bash
+codepraxis new my-challenge
+codepraxis validate --local my-challenge     # → PASSED
+```
+
+The generated pack is complete and already passing — solution passes, starter
+fails. Edit `._course_data/feature.md`, `source/`, `._tests/test_1.py` and
+`../solution/` to make it yours.
+
+## Two kinds of checking
+
+| Command | Runs | Cost |
+|---|---|---|
+| `codepraxis lint` | Static rules over the files | milliseconds, no execution |
+| `codepraxis validate` | The tests, against both fixtures | seconds (local) or ~1 min (remote) |
+
+`lint` never imports pack code, so it is safe on a pack you did not write and
+fast enough for every save. It catches things that otherwise only surface inside
+a container — a two-argument `testCases.__init__`, zero-padded case names, a
+`solution/` directory nested inside the pack, LaTeX in the Instructions brief.
+`validate` runs it automatically first and stops if it finds an error, because
+executing a pack whose class cannot be constructed only produces a confusing
+traceback.
 
 ## The two fixtures
 

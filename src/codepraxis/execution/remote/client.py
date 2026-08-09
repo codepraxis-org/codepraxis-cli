@@ -61,12 +61,15 @@ class ApiClient:
 
     def _headers(self, content_type: str | None = None) -> dict:
         headers = {
-            "Authorization": f"Bearer {self._config.token}",
             # Lets the server reject or warn on a CLI too old for the current
             # pack contract, instead of failing somewhere obscure.
             "X-Praxis-CLI-Version": __version__,
             "Accept": "application/json",
         }
+        # Public endpoints are called without credentials; sending an empty
+        # bearer token would be rejected as a malformed header.
+        if self._config.token:
+            headers["Authorization"] = f"Bearer {self._config.token}"
         if content_type:
             headers["Content-Type"] = content_type
         return headers

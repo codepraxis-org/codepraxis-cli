@@ -124,6 +124,16 @@ class HumanReporter:
         style = self._style
         seconds = result.duration_ms / 1000.0
 
+        # A static-only result has no fixtures, so the pass/fail rules below —
+        # which are about solution vs starter — do not apply. Its verdict is
+        # simply whether any rule reported an error.
+        if not result.runs:
+            if result.errors:
+                self._line(style.bad("  FAILED") + f" {len(result.errors)} problem(s) must be fixed")
+            else:
+                self._line(style.good("  OK") + style.dim("  no problems found"))
+            return
+
         starter = result.run_for(Fixture.STARTER)
         if starter is not None and starter.all_passed:
             self._line(

@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .commands import example as example_command
+from .commands import lint as lint_command
 from .commands import login as login_command
 from .commands import publish as publish_command
 from .commands import validate as validate_command
@@ -21,6 +23,7 @@ from .execution.local.executor import LocalExecutor
 from .plugin import installer
 from .reporting.human import HumanReporter
 from .reporting.json_reporter import JsonReporter
+from .scaffold import generator
 
 EXIT_USAGE = 2
 
@@ -62,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="TARGET",
         help="Install an integration. Currently: claude-plugin.",
     )
+    actions.add_argument(
+        "--example",
+        action="store_true",
+        help="Open the featured challenge in a live container. No account needed.",
+    )
 
     parser.add_argument(
         "--root",
@@ -87,6 +95,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show passing cases and anything the tier cannot verify.",
     )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        dest="open_browser",
+        help="With --example, open the container in your browser.",
+    )
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -146,6 +160,37 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("-v", "--verbose", action="store_true", help="Show passing cases and notes.")
     check.set_defaults(handler=_handle_validate)
 
+    static = subparsers.add_parser(
+        "lint",
+        help="Static checks only — no execution, no container.",
+        description=(
+            "Reads the pack and reports problems without importing or running any "
+            "of its code. Fast enough to run on every save, and safe on a pack you "
+            "did not write."
+        ),
+    )
+    static.add_argument("selector", nargs="?", help="Pack directory or name.")
+    static.add_argument("--root", type=Path, default=None, help="Directory to search for packs.")
+    static.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    static.add_argument("-v", "--verbose", action="store_true", help="Show notes as well as problems.")
+    static.set_defaults(handler=_handle_lint)
+
+    scaffold = subparsers.add_parser(
+        "new",
+        help="Scaffold a new pack that already validates.",
+        description=(
+            "Writes a complete, passing pack you can edit: solution passes, starter "
+            "fails. Running `codepraxis validate --local` on it should go green "
+            "immediately, which also proves your setup works."
+        ),
+    )
+    scaffold.add_argument("name", help="Pack name (lowercase letters, digits, underscores).")
+    scaffold.add_argument("--root", type=Path, default=None, help="Where to create it (default: ./challenges).")
+    scaffold.add_argument("--backend", default="AI", help="BACKEND value: AI, DSA, EMB or LNX.")
+    scaffold.add_argument("--language", default="PYTHON", help="LANGUAGE value.")
+    scaffold.add_argument("--force", action="store_true", help="Overwrite an existing directory.")
+    scaffold.set_defaults(handler=_handle_new)
+
     return parser
 
 
@@ -177,6 +222,29 @@ def _handle_validate(args: argparse.Namespace) -> int:
     )
 
 
+def _handle_lint(args: argparse.Namespace) -> int:
+    return lint_command.run(
+        root=args.root or Path.cwd(),
+        selector=args.selector,
+        reporter=_reporter(args),
+    )
+
+
+def _handle_new(args: argparse.Namespace) -> int:
+    # Default to ./challenges so the solution/ sibling lands outside the pack
+    # without the author having to think about layout.
+    root = args.root or (Path.cwd() / "challenges")
+    result = generator.create(
+        root=root,
+        raw_name=args.name,
+        backend=args.backend,
+        language=args.language,
+        force=args.force,
+    )
+    print(generator.describe(result, Path.cwd()))
+    return 0
+
+
 def _handle_install(target: str, force: bool) -> int:
     if target == "claude-plugin":
         result = installer.install(Path.cwd(), force=force)
@@ -203,6 +271,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         if args.install:
             return _handle_install(args.install, args.force)
+        if args.example:
+            return example_command.run(open_browser=args.open_browser)
         if not getattr(args, "handler", None):
             parser.print_help()
             return EXIT_USAGE

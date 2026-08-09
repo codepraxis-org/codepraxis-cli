@@ -43,6 +43,15 @@ FORBIDDEN_CONTENT = (
     "-----BEGIN RSA PRIVATE KEY-----",
 )
 
+#: Paths exempt from the *path* rules only. The scaffold ships first-party
+#: templates that are deliberately named like pack files — that is what makes
+#: `codepraxis new` work. Their contents are still scanned for credentials, and
+#: the exemption is a literal prefix so it cannot widen by accident.
+ALLOWED_PATH_PREFIXES = (
+    "codepraxis/scaffold/templates/",
+    "src/codepraxis/scaffold/templates/",
+)
+
 #: Only inspect the contents of text-ish files; wheels contain no binaries today
 #: but a future dependency might.
 TEXT_SUFFIXES = frozenset({".py", ".md", ".txt", ".toml", ".cfg", ".json", ".yaml", ".yml", ""})
@@ -72,9 +81,10 @@ def check(archive: Path) -> list[str]:
         # match the same way for wheels and sdists.
         relative = name.split("/", 1)[1] if archive.name.endswith(".tar.gz") and "/" in name else name
 
-        for pattern in FORBIDDEN_PATH_PATTERNS:
-            if pattern.search(relative):
-                problems.append(f"{archive.name}: forbidden path {relative!r} (matched {pattern.pattern})")
+        if not relative.startswith(ALLOWED_PATH_PREFIXES):
+            for pattern in FORBIDDEN_PATH_PATTERNS:
+                if pattern.search(relative):
+                    problems.append(f"{archive.name}: forbidden path {relative!r} (matched {pattern.pattern})")
 
         if Path(relative).suffix not in TEXT_SUFFIXES:
             continue

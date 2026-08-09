@@ -157,3 +157,34 @@ class TestRemoteDefaults:
         assert DEFAULT_API_URL.startswith("https://")
         assert DEFAULT_API_URL.endswith("/api/public")
         assert not DEFAULT_API_URL.endswith("/")
+
+
+class TestStaticOnlyVerdict:
+    """A lint result has no fixtures; the solution/starter rules must not apply."""
+
+    def _render(self, diagnostics):
+        import io
+
+        from codepraxis.domain.results import RunResult
+        from codepraxis.reporting.human import HumanReporter
+
+        stream = io.StringIO()
+        reporter = HumanReporter(stream=stream)
+        reporter.report(RunResult(pack_name="demo", executor="lint", diagnostics=tuple(diagnostics)))
+        reporter.close()
+        return stream.getvalue()
+
+    def test_a_clean_lint_reports_ok_not_failed(self):
+        assert "OK" in self._render([])
+        assert "FAILED" not in self._render([])
+
+    def test_a_lint_with_errors_reports_failed(self):
+        from codepraxis.domain.results import Diagnostic, Severity
+
+        output = self._render([Diagnostic(Severity.ERROR, "x.y", "broken")])
+        assert "FAILED" in output
+
+    def test_warnings_alone_do_not_fail(self):
+        from codepraxis.domain.results import Diagnostic, Severity
+
+        assert "OK" in self._render([Diagnostic(Severity.WARNING, "x.y", "cosmetic")])

@@ -68,6 +68,17 @@ class RemoteConfig:
     company: str | None = None
 
     @classmethod
+    def resolve_public(cls, api_url: str | None = None) -> RemoteConfig:
+        """Config for endpoints that need no key.
+
+        Used by ``--example``, which someone runs before they have credentials;
+        requiring a login there would put a signup in front of the demo.
+        """
+        stored = read_stored()
+        resolved_url = api_url or os.environ.get(ENV_API_URL) or stored.get("api_url") or DEFAULT_API_URL
+        return cls(api_url=resolved_url.rstrip("/"), token="", company=stored.get("company"))
+
+    @classmethod
     def resolve(cls, api_url: str | None = None, token: str | None = None) -> RemoteConfig:
         """Build a config, or explain precisely what is missing."""
         stored = read_stored()
