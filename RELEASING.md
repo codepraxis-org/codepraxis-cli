@@ -6,27 +6,62 @@ irreversible.
 
 ## One-time setup
 
-1. **Claim the name.** Register `codepraxis` on PyPI before the first real
-   release, so nobody else takes it. An initial `0.0.0` placeholder is enough.
-2. **Enable 2FA** on the PyPI account and any maintainer accounts.
-3. **Configure Trusted Publishing** (PyPI → project → Publishing). Add a
-   GitHub publisher:
+The GitHub side is done: `codepraxis-org/codepraxis-cli` is private, and the
+`pypi` and `testpypi` environments exist. What remains can only be done from a
+browser signed in to PyPI — there is no API for creating a Trusted Publisher.
 
-   | Field | Value |
-   |---|---|
-   | Owner | `codepraxis-org` |
-   | Repository | `praxis-cli` |
-   | Workflow | `release.yml` |
-   | Environment | `pypi` |
+### 1. TestPyPI — https://test.pypi.org
 
-   Repeat on TestPyPI with environment `testpypi`.
+Do this one first; it is the rehearsal target and mistakes there are cheap.
 
-4. **Create the GitHub environments** `pypi` and `testpypi`. Put required
-   reviewers on `pypi` so a publish needs a second pair of eyes.
+Account settings → **Publishing** → *Add a new pending publisher*:
 
-No API tokens anywhere. Trusted Publishing exchanges a short-lived GitHub OIDC
-token for an upload credential, so there is no long-lived secret to leak,
-rotate, or accidentally print in a log.
+| Field | Value |
+|---|---|
+| PyPI Project Name | `codepraxis` |
+| Owner | `codepraxis-org` |
+| Repository name | `codepraxis-cli` |
+| Workflow name | `release.yml` |
+| Environment name | `testpypi` |
+
+### 2. PyPI — https://pypi.org
+
+Same form, one field different:
+
+| Field | Value |
+|---|---|
+| PyPI Project Name | `codepraxis` |
+| Owner | `codepraxis-org` |
+| Repository name | `codepraxis-cli` |
+| Workflow name | `release.yml` |
+| Environment name | **`pypi`** |
+
+A *pending* publisher claims the name `codepraxis` and creates the project on
+first upload, so registering a placeholder release is unnecessary — but do add
+it before someone else takes the name.
+
+### 3. Enable 2FA
+
+On both accounts, for every maintainer.
+
+No API tokens are stored anywhere. Trusted Publishing exchanges a short-lived
+GitHub OIDC token for an upload credential, so there is no long-lived secret to
+leak, rotate, or print into a log.
+
+## The human gate
+
+`codepraxis-org` is on **GitHub Free**, where private repositories cannot have
+environment protection rules — required reviewers are rejected with HTTP 422.
+So the gate is structural instead:
+
+- **A tag only ever publishes to TestPyPI.** There is no path from
+  `git push --tags` to a permanent PyPI release.
+- **PyPI requires a deliberate manual dispatch**: Actions → release → *Run
+  workflow* → `target: pypi`.
+
+If the org moves to GitHub Team, add required reviewers to the `pypi`
+environment, and the `pypi` job's `if:` condition can be relaxed to allow tags
+through directly.
 
 ## Cutting a release
 
@@ -46,15 +81,17 @@ python -m twine check --strict dist/*
 python -m venv /tmp/smoke && /tmp/smoke/bin/pip install dist/*.whl
 /tmp/smoke/bin/praxis --version
 
-# 4. Dry run to TestPyPI
-gh workflow run release.yml -f target=testpypi
-pip install --index-url https://test.pypi.org/simple/ codepraxis
-
-# 5. Ship
+# 4. Tag — runs every gate and publishes to TestPyPI
 git tag v0.2.0 && git push origin v0.2.0
+pip install --index-url https://test.pypi.org/simple/ codepraxis==0.2.0
+
+# 5. Promote to PyPI, deliberately
+gh workflow run release.yml -f target=pypi
 ```
 
-Pushing a `v*` tag runs the full gate and publishes to PyPI.
+Step 5 is the only thing that writes to PyPI, and it cannot happen by accident.
+The build re-runs every gate before uploading, including a check that the tag
+matches `__version__`.
 
 ## What the gates check
 

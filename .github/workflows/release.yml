@@ -1,8 +1,16 @@
 name: release
 
 # Publishing is irreversible: a version number on PyPI can never be reused, even
-# after a delete. Every gate below runs before the upload step, and the upload
-# only happens for a tag.
+# after a delete.
+#
+# The org is on GitHub Free, where private repos cannot have environment
+# protection rules (required reviewers). So the human gate is structural
+# instead: a tag only ever reaches TestPyPI, and the real PyPI publish requires
+# someone to deliberately dispatch this workflow and pick `pypi`. There is no
+# path from `git push --tags` to a permanent PyPI release.
+#
+# When the org moves to Team, add required reviewers to the `pypi` environment
+# and a tag can be allowed to publish directly again.
 on:
   push:
     tags: ["v*"]
@@ -14,6 +22,10 @@ on:
         default: testpypi
         type: choice
         options: [testpypi, pypi]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -39,41 +51,62 @@ jobs:
         run: python -m twine check --strict dist/*
 
       - name: Verify the wheel installs and runs
-        # Catches the failure that unit tests cannot: a package that imports in
-        # the source tree but is missing a module once installed.
+        # Catches what unit tests cannot: a module that imports from the source
+        # tree but is missing once installed.
         run: |
           python -m venv /tmp/smoke
           /tmp/smoke/bin/pip install --quiet dist/*.whl
           /tmp/smoke/bin/praxis --version
           /tmp/smoke/bin/praxis test --help > /dev/null
 
+      - name: Confirm the tag matches the package version
+        # A tag that disagrees with __version__ publishes something nobody
+        # asked for, under a number nobody can reuse.
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version="$(python -c 'import re,pathlib; print(re.search(r"__version__ = \"([^\"]+)\"", pathlib.Path("src/praxis/__init__.py").read_text()).group(1))')"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match __version__ ($pkg_version)"
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
 
-  publish:
+  testpypi:
     needs: build
+    # A tag always rehearses; a dispatch rehearses unless pypi was chosen.
+    if: github.event_name == 'push' || inputs.target == 'testpypi'
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.target == 'pypi' && 'pypi' || github.event_name == 'push' && 'pypi' || 'testpypi' }}
+    environment: testpypi
     permissions:
       # Trusted Publishing: GitHub mints a short-lived OIDC token that PyPI
-      # verifies against the configured publisher. No API token is stored as a
-      # secret anywhere, so there is nothing to leak or rotate.
+      # verifies against the configured publisher. No API token is stored, so
+      # there is nothing to leak or rotate.
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
-
-      - name: Publish to TestPyPI
-        if: inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
 
-      - name: Publish to PyPI
-        if: inputs.target != 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
+  pypi:
+    needs: build
+    # Only ever reached by a deliberate manual dispatch.
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'pypi'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
