@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codepraxis"
+version = "0.1.0"
+description = "Author and validate CodePraxis challenge packs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+
+# The local harness is deliberately dependency-free: it must run on an author's
+# machine with nothing but a Python interpreter. Network commands (push/publish)
+# will add an HTTP client later behind an extra.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+praxis = "praxis.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/praxis"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
