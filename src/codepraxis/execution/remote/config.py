@@ -20,7 +20,10 @@ from pathlib import Path
 
 from ...errors import PraxisError
 
-DEFAULT_API_URL = "https://api.codepraxis.com"
+#: Public entry point for the platform API. The backend sits behind the web
+#: app rather than a dedicated api.* host, so the prefix is part of the base
+#: URL. Override with CODEPRAXIS_API_URL for staging or a local server.
+DEFAULT_API_URL = "https://www.codepraxis.co/api/public"
 
 ENV_API_URL = "CODEPRAXIS_API_URL"
 ENV_TOKEN = "CODEPRAXIS_TOKEN"

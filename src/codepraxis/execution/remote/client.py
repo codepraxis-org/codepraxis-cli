@@ -92,7 +92,12 @@ class ApiClient:
         except urllib.error.HTTPError as exc:
             raise self._translate(exc, method, path) from exc
         except urllib.error.URLError as exc:
-            raise PraxisError(f"Could not reach {self._config.api_url}: {exc.reason}") from exc
+            # A bare socket/TLS error is opaque ("tlsv1 unrecognized name"), and
+            # the usual cause is a wrong base URL, so name the override here.
+            raise PraxisError(
+                f"Could not reach {self._config.api_url}: {exc.reason}. "
+                f"If your platform is hosted elsewhere, set CODEPRAXIS_API_URL."
+            ) from exc
         except json.JSONDecodeError as exc:
             raise PraxisError(f"{method} {path} returned a non-JSON response") from exc
 

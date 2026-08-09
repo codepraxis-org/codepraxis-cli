@@ -143,3 +143,17 @@ class TestResponseUnwrapping:
         from codepraxis.execution.remote.client import _unwrap
 
         assert _unwrap({"status": "passed"}) == {"status": "passed"}
+
+
+class TestRemoteDefaults:
+    def test_default_api_url_includes_the_public_prefix(self):
+        """The backend sits behind the web app, so the prefix is part of the base.
+
+        Shipping a bare host meant `codepraxis --login` failed on a TLS error
+        before it could reach anything.
+        """
+        from codepraxis.execution.remote.config import DEFAULT_API_URL
+
+        assert DEFAULT_API_URL.startswith("https://")
+        assert DEFAULT_API_URL.endswith("/api/public")
+        assert not DEFAULT_API_URL.endswith("/")
