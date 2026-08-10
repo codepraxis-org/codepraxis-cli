@@ -40,6 +40,7 @@ def run(
     assume_yes: bool = False,
     live: bool = False,
     validation_run_id: str | None = None,
+    challenge_id: int | None = None,
     client: ApiClient | None = None,
 ) -> int:
     if not selector:
@@ -68,29 +69,36 @@ def run(
         run_id = _validate(pack, client, reporter)
 
     company = _company_name(client, config)
-    if not _confirm(pack.name, company, live, assume_yes):
+    if not _confirm(pack.name, company, live, assume_yes, challenge_id):
         print("Aborted.", file=sys.stderr)
         return EXIT_ABORTED
 
-    payload = client.post_json(
-        "/challenges",
-        {
-            # No company_id: the server derives ownership from the API key.
-            "name": pack.name,
-            "validation_run_id": run_id,
-            "status": "published" if live else "draft",
-        },
-    )
+    body = {
+        # No company_id: the server derives ownership from the API key.
+        "name": pack.name,
+        "validation_run_id": run_id,
+        "status": "published" if live else "draft",
+    }
+    # With an id, this publishes a new version of an existing question. Without
+    # one the platform creates a new question — which is why editing a pack and
+    # re-publishing used to leave a duplicate behind.
+    if challenge_id is not None:
+        body["challenge_id"] = challenge_id
+
+    payload = client.post_json("/challenges", body)
 
     challenge_id = payload.get("challenge_id")
     version_id = payload.get("challenge_version_id")
     container_url = payload.get("container_url")
     preview_error = payload.get("preview_error")
     state = "published" if live else "draft"
+    created = payload.get("created", True)
 
-    print(f"{pack.name} {state} for {company}")
+    verb = "published" if created else "updated"
+    print(f"{pack.name} {verb} for {company} ({state})")
     if challenge_id:
-        print(f"  challenge {challenge_id}, version {version_id}")
+        label = "challenge" if created else "challenge (new version of)"
+        print(f"  {label} {challenge_id}, version {version_id}")
     if container_url:
         print(f"  {container_url}")
     elif preview_error:
@@ -129,7 +137,7 @@ def _company_name(client: ApiClient, config: RemoteConfig | None) -> str:
     return company.get("name") or cached or "your company"
 
 
-def _confirm(pack_name: str, company: str, live: bool, assume_yes: bool) -> bool:
+def _confirm(pack_name: str, company: str, live: bool, assume_yes: bool, challenge_id: int | None = None) -> bool:
     if assume_yes:
         return True
     if not sys.stdin.isatty():
@@ -138,5 +146,6 @@ def _confirm(pack_name: str, company: str, live: bool, assume_yes: bool) -> bool
             "Pass --yes to publish non-interactively (CI)."
         )
     visibility = "LIVE to candidates" if live else "as a draft"
-    print(f"\nAbout to publish {pack_name} to {company}, {visibility}.")
+    target = f"as a new version of question {challenge_id}" if challenge_id else "as a new question"
+    print(f"\nAbout to publish {pack_name} to {company} {target}, {visibility}.")
     return input("Continue? [y/N] ").strip().lower() in {"y", "yes"}

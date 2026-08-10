@@ -125,6 +125,9 @@ class ApiClient:
             content_type="application/json",
         )
 
+    def delete(self, path: str) -> dict[str, Any]:
+        return self.request("DELETE", path)
+
     def post_bytes(self, path: str, blob: bytes) -> dict[str, Any]:
         return self.request("POST", path, body=blob, content_type="application/zip")
 

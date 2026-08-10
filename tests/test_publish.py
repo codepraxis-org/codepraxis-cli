@@ -227,3 +227,93 @@ def test_prints_container_url_when_platform_returns_one(tmp_path: Path, capsys):
     )
 
     assert "https://container.example" in capsys.readouterr().out
+
+
+class TestRepublishingAnEdit:
+    """Editing a pack and publishing again must update, not duplicate.
+
+    Without a challenge_id the platform creates a new question every time, which
+    is how a typo fix used to leave two copies in the catalog.
+    """
+
+    def test_challenge_id_is_sent_when_given(self, tmp_path):
+        build_pack(tmp_path)
+        client = FakeClient()
+
+        publish.run(
+            root=tmp_path,
+            selector="demo",
+            reporter=NullReporter(),
+            assume_yes=True,
+            validation_run_id="vr_1",
+            challenge_id=64,
+            client=client,
+        )
+
+        assert client.posted[0][1]["challenge_id"] == 64
+
+    def test_no_challenge_id_means_create(self, tmp_path):
+        build_pack(tmp_path)
+        client = FakeClient()
+
+        publish.run(
+            root=tmp_path,
+            selector="demo",
+            reporter=NullReporter(),
+            assume_yes=True,
+            validation_run_id="vr_1",
+            client=client,
+        )
+
+        assert "challenge_id" not in client.posted[0][1]
+
+    def test_output_says_updated_when_the_platform_reused_a_question(self, tmp_path, capsys):
+        build_pack(tmp_path)
+        client = FakeClient()
+        client.post_json = lambda path, payload: {
+            "challenge_id": 64,
+            "challenge_version_id": 91,
+            "created": False,
+        }
+
+        publish.run(
+            root=tmp_path,
+            selector="demo",
+            reporter=NullReporter(),
+            assume_yes=True,
+            validation_run_id="vr_1",
+            challenge_id=64,
+            client=client,
+        )
+
+        output = capsys.readouterr().out
+        assert "updated" in output
+        assert "published for" not in output
+
+
+class TestDelete:
+    class Client:
+        def __init__(self, payload=None):
+            self.deleted = []
+            self.payload = payload or {"challenge_id": 7, "versions_removed": 2}
+
+        def delete(self, path):
+            self.deleted.append(path)
+            return self.payload
+
+    def test_deletes_after_confirmation_is_waived(self, capsys):
+        from codepraxis.commands import catalog
+
+        client = self.Client()
+        assert catalog.delete_question(7, client=client, assume_yes=True) == 0
+        assert client.deleted == ["/challenges/7"]
+        assert "Deleted question 7" in capsys.readouterr().out
+
+    def test_refuses_without_a_terminal_and_without_yes(self):
+        from codepraxis.commands import catalog
+        from codepraxis.errors import PraxisError
+
+        client = self.Client()
+        with pytest.raises(PraxisError, match="not a terminal"):
+            catalog.delete_question(7, client=client)
+        assert client.deleted == []

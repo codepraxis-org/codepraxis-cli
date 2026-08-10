@@ -12,6 +12,7 @@ codepraxis --login
 codepraxis --publish my-challenge            # validates in the runner, then publishes
 codepraxis --list                            # list company questions
 codepraxis --edit 123 --open                 # update metadata/open a preview container
+codepraxis --publish my-challenge --challenge-id 123   # publish an edit, not a duplicate
 ```
 
 ## What this is
@@ -189,6 +190,31 @@ codepraxis --edit 123 --open
 
 `--list` shows the questions owned by your API key's company, including drafts.
 `--edit` updates question metadata and returns a container URL for inspection.
+
+### Publishing an edit
+
+Changing the *content* of a question means re-publishing the pack. Pass the
+question's id, or you get a second copy:
+
+```bash
+codepraxis --publish my-challenge --challenge-id 123
+```
+
+With `--challenge-id` the platform adds a new version to that question and
+keeps its id, assignments and history. Without it, publish always creates a
+new question — which is the right behaviour the first time and a duplicate
+every time after.
+
+### Deleting
+
+```bash
+codepraxis --delete 123
+```
+
+Asks first, and the platform refuses outright once the question has been
+assigned to anyone — deleting it then would orphan attempts and reports that
+candidates and reviewers still depend on. To take an assigned question out of
+circulation, set it back to draft with `--edit 123 --status draft`.
 Code changes still go through the pack workflow: edit locally, validate, and
 publish a new version.
 

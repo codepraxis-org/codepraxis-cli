@@ -11,6 +11,7 @@ from ..execution.remote.client import ApiClient
 from ..execution.remote.config import RemoteConfig
 
 EXIT_OK = 0
+EXIT_ABORTED = 2
 
 
 def list_questions(client: ApiClient | None = None, as_json: bool = False) -> int:
@@ -79,3 +80,35 @@ def _print_challenge(challenge: dict[str, Any]) -> None:
     if updated:
         line += f"\t{updated}"
     print(line)
+
+
+def delete_question(
+    challenge_id: int,
+    client: ApiClient | None = None,
+    assume_yes: bool = False,
+) -> int:
+    """Delete a question the company owns.
+
+    Confirmed by default: unlike a draft, this is not recoverable from the
+    dashboard. The platform refuses outright once the question has been assigned
+    to anyone, so the destructive case this guards is an unassigned question the
+    author still wanted.
+    """
+    import sys
+
+    client = client or ApiClient(RemoteConfig.resolve())
+
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            raise PraxisError(
+                "Deleting needs confirmation, but stdin is not a terminal. Pass --yes."
+            )
+        print(f"Permanently delete question {challenge_id}? This cannot be undone.")
+        if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
+            print("Aborted.", file=sys.stderr)
+            return EXIT_ABORTED
+
+    payload = client.delete(f"/challenges/{challenge_id}")
+    removed = payload.get("versions_removed", 0)
+    print(f"Deleted question {challenge_id} ({removed} version(s) removed).")
+    return EXIT_OK

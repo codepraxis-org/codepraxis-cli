@@ -72,6 +72,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Edit question metadata and open its container preview.",
     )
     actions.add_argument(
+        "--delete",
+        type=int,
+        metavar="CHALLENGE_ID",
+        help="Delete a question your company owns. Refused once it has been assigned.",
+    )
+    actions.add_argument(
         "--install",
         choices=INSTALLABLES,
         metavar="TARGET",
@@ -95,6 +101,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--live",
         action="store_true",
         help="With --publish, publish straight to candidates instead of as a draft.",
+    )
+    parser.add_argument(
+        "--challenge-id",
+        type=int,
+        help=(
+            "With --publish, publish a new version of this existing question "
+            "instead of creating another one. Get the id from --list."
+        ),
     )
     parser.add_argument(
         "--validation-run-id",
@@ -316,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
                 assume_yes=args.yes,
                 live=args.live,
                 validation_run_id=args.validation_run_id,
+                challenge_id=args.challenge_id,
             )
         if args.list:
             return catalog_command.list_questions(as_json=args.json)
@@ -325,6 +340,8 @@ def main(argv: list[str] | None = None) -> int:
                 updates=_edit_updates(args),
                 open_browser=args.open_browser,
             )
+        if args.delete is not None:
+            return catalog_command.delete_question(args.delete, assume_yes=args.yes)
         if args.install:
             return _handle_install(args.install, args.force)
         if args.example:
