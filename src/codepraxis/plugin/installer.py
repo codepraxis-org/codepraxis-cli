@@ -1,8 +1,12 @@
 """Install the CodePraxis authoring tools as a Claude Code plugin.
 
-Writes a self-contained local marketplace into the user's project, so authors
-running Claude Code get the pack contract, a scaffolding command, and a
-validate-and-fix loop without having to explain any of it.
+**This is the fallback, not the normal path.** The plugin is served straight
+from the public repository, so almost everyone should add it as a hosted
+marketplace and never touch this command — that works identically on every
+machine, needs no path, and picks up prompt changes without a CLI upgrade.
+
+Installing locally is for working offline, or for editing the prompts and
+trying the result before it is merged.
 
 The templates ship inside the wheel and are copied out verbatim; nothing is
 fetched from the network.
@@ -23,7 +27,16 @@ from ..errors import PraxisError
 INSTALL_DIR = Path(".codepraxis") / "claude-plugin"
 
 PLUGIN_NAME = "codepraxis"
-MARKETPLACE_NAME = "codepraxis-local"
+
+#: The hosted marketplace: the repository itself, which carries a
+#: `.claude-plugin/marketplace.json` at its root.
+HOSTED_MARKETPLACE = "codepraxis-org/codepraxis-cli"
+HOSTED_NAME = "codepraxis"
+
+#: The local one is named differently on purpose. Marketplace names are global
+#: in Claude Code, so sharing a name would mean a local install silently
+#: displaced the hosted one — or refused to be added at all.
+LOCAL_NAME = "codepraxis-local"
 
 
 @dataclass(frozen=True)
@@ -74,23 +87,16 @@ def install(project_root: Path, force: bool = False) -> InstallResult:
     templates = _templates()
     written: list[Path] = []
 
-    # Marketplace manifest at the root; the plugin itself one level down, which
-    # is the layout `/plugin marketplace add <dir>` expects.
+    # The layout mirrors the repository exactly: a marketplace manifest at the
+    # root, and the plugin beside it in ./plugin. Keeping the two identical
+    # means a prompt edited here can be moved upstream unchanged.
     marketplace_dir = root / ".claude-plugin"
     marketplace_dir.mkdir(parents=True, exist_ok=True)
     marketplace = marketplace_dir / "marketplace.json"
     marketplace.write_bytes((templates / "marketplace.json").read_bytes())
     written.append(marketplace)
 
-    plugin_root = root / PLUGIN_NAME
-    plugin_manifest_dir = plugin_root / ".claude-plugin"
-    plugin_manifest_dir.mkdir(parents=True, exist_ok=True)
-    manifest = plugin_manifest_dir / "plugin.json"
-    manifest.write_bytes((templates / "plugin.json").read_bytes())
-    written.append(manifest)
-
-    for name in ("commands", "skills"):
-        _copy_tree(templates / name, plugin_root / name, written)
+    _copy_tree(templates / "plugin", root / "plugin", written)
 
     return InstallResult(root=root, files=written, overwritten=existed)
 
@@ -101,25 +107,31 @@ def describe(result: InstallResult) -> str:
     with contextlib.suppress(ValueError):
         relative = result.root.relative_to(Path.cwd())
 
+    # A relative path, prefixed with "./". A bare `foo/bar` is read as GitHub
+    # owner/repo shorthand and Claude Code tries to clone it; "./" cannot be
+    # parsed that way, and unlike an absolute path it is the same string on
+    # every machine.
+    source = f"./{relative.as_posix()}" if not relative.is_absolute() else relative.as_posix()
+
     return "\n".join(
         [
-            f"Installed the Claude Code plugin into {relative}",
+            f"Installed the local plugin into {relative}",
             f"  {len(result.files)} files",
             "",
             "Enable it in Claude Code:",
             "",
-            # The absolute path is deliberate. `/plugin marketplace add` reads a
-            # bare `foo/bar` as a GitHub owner/repo shorthand and tries to clone
-            # it, so a relative path here fails with "Repository not found". A
-            # leading slash cannot be parsed that way.
-            f"  /plugin marketplace add {result.root}",
-            f"  /plugin install {PLUGIN_NAME}@{MARKETPLACE_NAME}",
+            f"  /plugin marketplace add {source}",
+            f"  /plugin install {PLUGIN_NAME}@{LOCAL_NAME}",
             "",
             "Then:",
             "",
-            "  /codepraxis:new         scaffold a pack from a description",
-            "  /codepraxis:validate    validate a pack and fix what fails",
+            "  /codepraxis:new         design and build a question",
+            "  /codepraxis:validate    check one and fix what fails",
             "",
-            "The pack-authoring skill loads automatically when Claude touches a pack.",
+            "Most people do not need this. The hosted plugin works the same on",
+            "every machine and updates itself:",
+            "",
+            f"  /plugin marketplace add {HOSTED_MARKETPLACE}",
+            f"  /plugin install {PLUGIN_NAME}@{HOSTED_NAME}",
         ]
     )

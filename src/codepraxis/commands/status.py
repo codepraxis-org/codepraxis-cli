@@ -22,6 +22,7 @@ from pathlib import Path
 from ..domain import contract
 from ..execution.remote import config as remote_config
 from ..packio import discovery
+from ..plugin import installer
 
 EXIT_OK = 0
 
@@ -124,8 +125,10 @@ def _print_signed_out() -> None:
 
 def _print_empty() -> None:
     print("  No questions here yet.\n")
-    print("  Design one with Claude:")
-    print("      codepraxis install claude-plugin     then  /codepraxis:plan\n")
+    print("  Design one with Claude — run these in Claude Code:")
+    print(f"      /plugin marketplace add {installer.HOSTED_MARKETPLACE}")
+    print(f"      /plugin install {installer.PLUGIN_NAME}@{installer.HOSTED_NAME}")
+    print("      /codepraxis:plan\n")
     print("  Or scaffold one by hand:")
     print("      codepraxis new my-question\n")
     print("  The whole thing explained:")

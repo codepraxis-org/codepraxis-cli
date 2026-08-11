@@ -50,18 +50,44 @@ leak, rotate, or print into a log.
 
 ## The human gate
 
-`codepraxis-org` is on **GitHub Free**, where private repositories cannot have
-environment protection rules — required reviewers are rejected with HTTP 422.
-So the gate is structural instead:
+Publishing must never happen by accident, so something has to stand between a
+push and PyPI. Which mechanism is available depends on the repository's
+visibility.
+
+### Today: a structural gate
+
+Environment protection rules — required reviewers — are unavailable on private
+repositories under **GitHub Free**; GitHub rejects them with HTTP 422. So the
+gate is the workflow's shape instead:
 
 - **A tag only ever publishes to TestPyPI.** There is no path from
   `git push --tags` to a permanent PyPI release.
 - **PyPI requires a deliberate manual dispatch**: Actions → release → *Run
   workflow* → `target: pypi`.
 
-If the org moves to GitHub Team, add required reviewers to the `pypi`
-environment, and the `pypi` job's `if:` condition can be relaxed to allow tags
-through directly.
+### Once the repository is public: a reviewer gate
+
+Environment protection rules are free on **public** repositories, so the
+awkward two-step is no longer necessary. Making the repo public — which changes
+nothing about what is exposed, since PyPI already ships the full source — lets
+the gate become a person instead of a procedure:
+
+1. Settings → Environments → `pypi` → **Required reviewers**, add the
+   maintainers.
+2. Relax the `pypi` job's condition in `release.yml` so a tag can reach it:
+
+   ```yaml
+   # was: github.event_name == 'workflow_dispatch' && inputs.target == 'pypi'
+   if: startsWith(github.ref, 'refs/tags/v') || inputs.target == 'pypi'
+   ```
+
+Then `git push origin v0.5.0` runs every gate, publishes to TestPyPI, and
+*waits* for a human to approve the PyPI step. Same protection, one command, and
+the approval is recorded against a named person rather than being invisible in
+someone's shell history.
+
+Keep the manual dispatch as-is; it stays useful for re-publishing a build
+without cutting a new tag.
 
 ## Cutting a release
 

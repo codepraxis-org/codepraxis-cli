@@ -37,7 +37,10 @@ dynamic = ["version"]
 dev = ["pytest>=7", "ruff==0.16.2", "build>=1", "twine>=5"]
 
 [project.urls]
+Homepage = "https://codepraxis.co"
 Documentation = "https://docs.codepraxis.com/authoring"
+Source = "https://github.com/codepraxis-org/codepraxis-cli"
+Issues = "https://github.com/codepraxis-org/codepraxis-cli/issues"
 
 [project.scripts]
 codepraxis = "codepraxis.cli:main"
@@ -55,6 +58,7 @@ packages = ["src/codepraxis"]
 include = [
     "src/codepraxis",
     "tests",
+    ".claude-plugin",
     "README.md",
     "ARCHITECTURE.md",
     "CONTRIBUTING.md",

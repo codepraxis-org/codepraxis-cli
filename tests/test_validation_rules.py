@@ -224,21 +224,28 @@ class TestExampleCommand:
 class TestPluginInstructions:
     """`/plugin marketplace add` reads a bare `foo/bar` as a GitHub repo.
 
-    A relative path there fails with "Repository not found", so the printed
-    command must be one that cannot be parsed as owner/repo.
+    So the printed path must be "./"-prefixed: that cannot be parsed as
+    owner/repo, and unlike an absolute path it is the same string on every
+    machine — which is the whole point, since the instructions get copied
+    between laptops.
     """
 
-    def test_marketplace_command_uses_an_absolute_path(self, tmp_path, monkeypatch):
+    def test_marketplace_command_uses_a_dot_relative_path(self, tmp_path, monkeypatch):
         from codepraxis.plugin import installer
 
         monkeypatch.chdir(tmp_path)
         result = installer.install(tmp_path)
         line = next(
-            text for text in installer.describe(result).splitlines() if "marketplace add" in text
+            text
+            for text in installer.describe(result).splitlines()
+            if "marketplace add" in text and installer.HOSTED_MARKETPLACE not in text
         )
 
         path = line.split("marketplace add", 1)[1].strip()
-        assert path.startswith("/"), f"{path!r} would be read as a GitHub owner/repo"
+        assert path.startswith("./"), f"{path!r} would be read as a GitHub owner/repo"
+        assert "/Users/" not in path and not path.startswith("/"), (
+            f"{path!r} is machine-specific; the same instructions are used on every machine"
+        )
         assert Path(path).is_dir()
 
     def test_the_marketplace_manifest_is_where_the_command_points(self, tmp_path, monkeypatch):
@@ -248,4 +255,39 @@ class TestPluginInstructions:
         result = installer.install(tmp_path)
 
         assert (result.root / ".claude-plugin" / "marketplace.json").is_file()
-        assert (result.root / "codepraxis" / ".claude-plugin" / "plugin.json").is_file()
+        assert (result.root / "plugin" / ".claude-plugin" / "plugin.json").is_file()
+
+    def test_the_local_marketplace_is_named_apart_from_the_hosted_one(self, tmp_path, monkeypatch):
+        """Marketplace names are global in Claude Code.
+
+        Sharing a name means installing locally silently displaces the hosted
+        plugin, or is refused outright — which is exactly the collision this
+        naming avoids.
+        """
+        from codepraxis.plugin import installer
+
+        monkeypatch.chdir(tmp_path)
+        result = installer.install(tmp_path)
+        manifest = json.loads((result.root / ".claude-plugin" / "marketplace.json").read_text())
+
+        assert manifest["name"] == installer.LOCAL_NAME
+        assert manifest["name"] != installer.HOSTED_NAME
+        assert manifest["plugins"][0]["source"] == "./plugin"
+
+    def test_the_repository_marketplace_points_at_a_real_plugin(self):
+        """The hosted marketplace is served from the repo root.
+
+        If this manifest's source path drifts from where the plugin actually
+        lives, `/plugin marketplace add codepraxis-org/codepraxis-cli` resolves
+        to nothing — and it fails for every user at once, not just us.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        manifest_path = repo_root / ".claude-plugin" / "marketplace.json"
+        assert manifest_path.is_file(), "the repo must carry a root marketplace manifest"
+
+        manifest = json.loads(manifest_path.read_text())
+        source = repo_root / manifest["plugins"][0]["source"]
+
+        assert (source / ".claude-plugin" / "plugin.json").is_file()
+        assert (source / "commands").is_dir()
+        assert (source / "skills").is_dir()

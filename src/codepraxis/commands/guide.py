@@ -39,12 +39,13 @@ codepraxis — build real-world coding assessments
 
   WORKING WITH CLAUDE CODE
 
-    The steps above are driven by Claude. Install the plugin
-    once per repository:
+    The steps above are driven by Claude. Run these two once,
+    in Claude Code — the same on every machine:
 
-        codepraxis install claude-plugin
+        /plugin marketplace add codepraxis-org/codepraxis-cli
+        /plugin install codepraxis@codepraxis
 
-    It prints two commands to enable it, and then you get:
+    Then you get:
 
         /codepraxis:plan       design a question, no code yet
         /codepraxis:build      write it, test it, fix it
@@ -52,6 +53,9 @@ codepraxis — build real-world coding assessments
 
     Without the plugin the CLI still works on its own:
     `codepraxis new`, `validate`, `ship`, `list`, `edit`.
+
+    Working offline, or editing the prompts yourself? Then
+    `codepraxis install claude-plugin` writes a local copy.
 
   WHAT MAKES A GOOD QUESTION
 

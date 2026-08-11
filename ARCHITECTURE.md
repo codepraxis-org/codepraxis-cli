@@ -285,19 +285,52 @@ is.
 
 ## The Claude Code plugin
 
-`codepraxis install claude-plugin` writes a self-contained local marketplace
-into `.codepraxis/claude-plugin/`. Nothing is fetched from the network — the
-templates ship inside the wheel and are copied out with `importlib.resources`,
-so it works from a wheel, a zip or an editable install.
+The plugin is **served from this repository**. A `.claude-plugin/marketplace.json`
+at the repo root makes the repo itself a Claude Code marketplace, so enabling it
+is two lines that are identical on every machine:
 
 ```
-.codepraxis/claude-plugin/
-  .claude-plugin/marketplace.json
-  codepraxis/
-    .claude-plugin/plugin.json
-    commands/          the slash commands
-    skills/            loaded automatically when Claude touches a question
+/plugin marketplace add codepraxis-org/codepraxis-cli
+/plugin install codepraxis@codepraxis
 ```
+
+That is the whole reason the repository is public. It also decouples two things
+that update at different speeds: **the CLI is a tool you install; the plugin is
+content that should update on its own.** A wording fix in a prompt reaches every
+user on the next marketplace refresh, with no PyPI release involved.
+
+The plugin lives at `src/codepraxis/plugin/templates/plugin/`, which the root
+manifest points at. Keeping it inside the package rather than at the repo root
+is deliberate: it is the same directory the wheel ships, so there is exactly one
+copy. A second copy at the root would be a second thing to keep in sync, and it
+would drift.
+
+```
+.claude-plugin/marketplace.json          the repo IS the marketplace
+src/codepraxis/plugin/templates/
+  marketplace.json                       used only by the local install
+  plugin/
+    .claude-plugin/plugin.json
+    commands/                            the slash commands
+    skills/                              loaded when Claude touches a question
+```
+
+### The local fallback
+
+`codepraxis install claude-plugin` writes the same layout into
+`.codepraxis/claude-plugin/`, for working offline or trying a prompt edit before
+merging it. Nothing is fetched from the network — templates are copied out with
+`importlib.resources`, so it works from a wheel, a zip or an editable install.
+
+Two details that were bugs before:
+
+- **The printed path is `./`-relative, not absolute.** Claude Code reads a bare
+  `foo/bar` as a GitHub owner/repo and tries to clone it, so the prefix is
+  required — but an absolute path is machine-specific, and these instructions
+  get copied between laptops.
+- **The local marketplace is named `codepraxis-local`, the hosted one
+  `codepraxis`.** Marketplace names are global, so sharing one means a local
+  install silently displaces the hosted plugin, or is refused outright.
 
 Installing refuses to overwrite an existing install without `--force`, because
 an author may have edited the commands and silently reverting that is worse

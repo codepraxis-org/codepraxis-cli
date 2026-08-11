@@ -7,9 +7,15 @@ pip install codepraxis
 
 codepraxis example                    # see a real question, no account needed
 codepraxis login
-codepraxis install claude-plugin      # design and build questions with Claude
 codepraxis                            # where am I, what is next
 codepraxis guide                      # the whole thing explained
+```
+
+Then, in Claude Code:
+
+```
+/plugin marketplace add codepraxis-org/codepraxis-cli
+/plugin install codepraxis@codepraxis
 ```
 
 ## What this is
@@ -42,12 +48,14 @@ Run `codepraxis` at any point to see where you are and what to type next.
 
 ## Working with Claude Code
 
-```bash
-codepraxis install claude-plugin
+```
+/plugin marketplace add codepraxis-org/codepraxis-cli
+/plugin install codepraxis@codepraxis
 ```
 
-Writes a local plugin into `.codepraxis/claude-plugin/`, then prints the two
-commands that enable it. You get:
+The same two lines on every machine — no paths, nothing to keep in sync, and
+prompt improvements arrive on the next marketplace refresh without a CLI
+upgrade. You get:
 
 - **`/codepraxis:plan`** — design a question: what it tests, what the candidate
   starts from, the cases, how long it should take
@@ -56,11 +64,14 @@ commands that enable it. You get:
 - a **pack-authoring skill** that loads automatically when Claude touches a
   question, so it already knows the contract
 
-Re-run with `--force` to overwrite an existing install.
-
 Planning refuses to proceed on a question a model can solve from the brief
 alone. Candidates have an AI agent in the container, so a question that is one
 prompt away from done measures nothing.
+
+Working offline, or editing the prompts before they are merged?
+`codepraxis install claude-plugin` writes a local copy and prints how to enable
+it. It registers under a different marketplace name, so it will not collide
+with the hosted one.
 
 ## Doing it by hand
 
