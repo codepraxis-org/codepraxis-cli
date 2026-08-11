@@ -35,6 +35,20 @@ REQUIRED_PACK_PATHS = (
     f"{COURSE_DATA_DIR}/feature.md",
 )
 
+# --- Authoring-side files --------------------------------------------------
+# Neither of these is read by the runner; both live in the pack because the
+# author needs them in version control next to the code they describe.
+
+#: The plan, written before any code and reviewed by whoever signs the question
+#: off. Also what an edit reads months later to recover the original intent.
+SPEC_FILE = "spec.md"
+
+#: Catalog identity — challenge id, title, difficulty, time limit, tech stack.
+#: Real packs in the question bank already carry this; before it was adopted
+#: here the same values were passed as one-off command-line flags, which meant
+#: a question's identity lived in someone's shell history.
+PUBLISH_FILE = "publish.json"
+
 # --- Workspace -------------------------------------------------------------
 #: setupCodeBase.py rsyncs ``source/`` *contents* (note the trailing slash in the
 #: runner's rsync) into /home/praxis/{foldername}/ — a flat copy, not a nested

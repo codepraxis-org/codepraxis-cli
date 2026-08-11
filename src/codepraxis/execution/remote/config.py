@@ -4,7 +4,7 @@ Resolution order, first hit wins:
 
 1. explicit arguments
 2. environment (``CODEPRAXIS_API_URL``, ``CODEPRAXIS_TOKEN``)
-3. ``~/.config/codepraxis/config.json``, written by ``codepraxis --login``
+3. ``~/.config/codepraxis/config.json``, written by ``codepraxis login``
 
 Keeping this separate from the client means credential handling is testable
 without a network, and nothing else in the package reads the environment.
@@ -43,7 +43,7 @@ def read_stored() -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise PraxisError(f"Could not read {path}: {exc}. Re-run `codepraxis --login`.") from exc
+        raise PraxisError(f"Could not read {path}: {exc}. Re-run `codepraxis login`.") from exc
 
 
 def write_stored(data: dict) -> Path:
@@ -88,7 +88,7 @@ class RemoteConfig:
 
         if not resolved_token:
             raise PraxisError(
-                "Not authenticated. Run `codepraxis --login`, or set "
+                "Not authenticated. Run `codepraxis login`, or set "
                 f"{ENV_TOKEN} in the environment (useful in CI)."
             )
 

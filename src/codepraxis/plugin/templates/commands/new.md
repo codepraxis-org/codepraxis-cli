@@ -1,7 +1,7 @@
 ---
 description: Design, build, validate, publish, and preview a CodePraxis question
 argument-hint: "<what the challenge should test>"
-allowed-tools: Bash(codepraxis validate:*), Bash(codepraxis --publish:*), Read, Write, Edit, Glob
+allowed-tools: Bash(codepraxis validate:*), Bash(codepraxis ship:*), Read, Write, Edit, Glob
 ---
 
 Create and publish a new CodePraxis question for: **$ARGUMENTS**
@@ -30,10 +30,10 @@ question is done until publish returns a URL.
 4. **Validate without asking the user to choose tiers.** Run
    `codepraxis validate --local <slug>` and iterate until the solution passes
    everything and the starter passes nothing. Then publish with
-   `codepraxis --publish <slug>`; the CLI runs the authoritative remote
+   `codepraxis ship <slug>`; the CLI runs the authoritative remote
    validation before it publishes.
 
-5. **Publish and return the URL.** When `codepraxis --publish <slug>` succeeds,
+5. **Publish and return the URL.** When `codepraxis ship <slug>` succeeds,
    copy the container URL from its output into your final answer so the user can
    open the question and inspect it.
 

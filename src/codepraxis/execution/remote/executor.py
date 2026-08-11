@@ -6,7 +6,7 @@ cannot — ``setup.sh``, the image's package set, the LLM proxy, real container
 CPU and memory, and the packaged zip layout.
 
 Only a passing remote run permits publishing, and the run id it returns is what
-``codepraxis --publish`` presents as evidence.
+``codepraxis ship`` presents as evidence.
 """
 
 from __future__ import annotations

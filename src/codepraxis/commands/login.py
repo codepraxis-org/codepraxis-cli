@@ -1,4 +1,4 @@
-"""``codepraxis --login`` — store an API key and confirm who it belongs to.
+"""``codepraxis login`` — store an API key and confirm who it belongs to.
 
 The key is verified against the platform before it is written, so a typo fails
 here rather than at the next publish. The response also tells the author which

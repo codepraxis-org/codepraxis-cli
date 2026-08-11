@@ -1,4 +1,4 @@
-"""``codepraxis --example`` — open the featured challenge in a live container.
+"""``codepraxis example`` — open the featured challenge in a live container.
 
 The fastest way to understand what a pack becomes: the platform allocates a
 throwaway container, clones the featured challenge into it, and returns a URL

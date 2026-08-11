@@ -1,4 +1,4 @@
-"""``codepraxis --publish`` — publish a validated pack to your company.
+"""``codepraxis ship`` — publish a validated pack to your company.
 
 Publishing is outward-facing and effectively irreversible: candidates can be
 assigned the challenge immediately. So the flow is deliberately strict.
@@ -45,7 +45,7 @@ def run(
 ) -> int:
     if not selector:
         raise PraxisError(
-            "Publishing needs an explicit pack: `codepraxis --publish <name>`. "
+            "Publishing needs an explicit pack: `codepraxis ship <name>`. "
             "Refusing to publish every pack it can find."
         )
 

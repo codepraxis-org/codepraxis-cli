@@ -1,102 +1,111 @@
 # codepraxis
 
-Author and validate CodePraxis challenge packs from your own repository.
+Build real-world coding assessments from your own repository.
 
 ```bash
 pip install codepraxis
-codepraxis --example                         # see a real challenge, no account needed
-codepraxis new my-challenge                  # scaffold one that already validates
-codepraxis lint my-challenge                 # static checks, no execution
-codepraxis validate --local my-challenge     # run it, fast and advisory
-codepraxis --login
-codepraxis --publish my-challenge            # validates in the runner, then publishes
-codepraxis --list                            # list company questions
-codepraxis --edit 123 --open                 # update metadata/open a preview container
-codepraxis --publish my-challenge --challenge-id 123   # publish an edit, not a duplicate
+
+codepraxis example                    # see a real question, no account needed
+codepraxis login
+codepraxis install claude-plugin      # design and build questions with Claude
+codepraxis                            # where am I, what is next
+codepraxis guide                      # the whole thing explained
 ```
 
 ## What this is
 
-A challenge pack is a directory — starter code, a test module, instructions.
-This CLI lets you keep packs in your own git repository, iterate on them with
-your own editor, and check them before they reach candidates.
+CodePraxis gives candidates real engineering work instead of algorithm puzzles.
+They open a browser, land in a real editor in a real container, and fix or build
+something. Hidden tests decide whether it worked.
 
-Two tiers, one result shape:
+This CLI is how you make those questions — keeping them in your own git
+repository, editing them with your own tools, and checking them before they
+reach anyone.
 
-| Command | Runs | Speed | Authoritative? |
-|---|---|---|---|
-| `codepraxis validate --local` | Pure-Python harness on your machine | seconds | No — advisory |
-| `codepraxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes — gates publish** |
+A question is a directory: starter code, a test module, instructions.
 
-`--local` reproduces how the runner loads, orders and scores a pack, so it
-catches most authoring mistakes in the inner loop. It is **not** the container:
-it does not run `setup.sh` and does not have the image's package set. Anything
-it cannot check is reported as a `note` rather than silently passing.
-Publishing always requires a remote run.
+## The steps
 
-### Packs that call a model
-
-By default there is no model endpoint locally, so cases that need one are
-reported **unverifiable** rather than failed — a pack is not broken just because
-your laptop has no LLM proxy. Point it at a real endpoint and they run for real:
-
-```bash
-export OPENAI_API_KEY=...              # or --llm-api-key
-export OPENAI_BASE_URL=...             # or --llm-base-url
-codepraxis validate --local my-challenge
+```
+plan  →  build  →  try  →  ship
 ```
 
-Once a key is configured the leniency stops: a model failure is then a real
-failure, because it can be judged.
+| | |
+|---|---|
+| **plan** | Talk it through, agree what to test. No code yet. |
+| **build** | Claude writes the question, tests it, and fixes what fails. |
+| **try** | Open it exactly as a candidate would. Nothing published. |
+| **ship** | Publish as a draft, then go live. |
+| **edit** | Pull one back down to change it later. |
 
-## Try it first
+Run `codepraxis` at any point to see where you are and what to type next.
 
-```bash
-codepraxis --example
-```
-
-Starts a throwaway container with the featured challenge already cloned into it
-and prints a URL. That is exactly what a candidate sees. No login, no account,
-nothing recorded as an attempt. Add `--open` to launch it in your browser.
-
-## Starting a new pack
+## Working with Claude Code
 
 ```bash
-codepraxis new my-challenge
-codepraxis validate --local my-challenge     # → PASSED
+codepraxis install claude-plugin
 ```
 
-The generated pack is complete and already passing — solution passes, starter
-fails. Edit `._course_data/feature.md`, `source/`, `._tests/test_1.py` and
-`../solution/` to make it yours.
+Writes a local plugin into `.codepraxis/claude-plugin/`, then prints the two
+commands that enable it. You get:
+
+- **`/codepraxis:plan`** — design a question: what it tests, what the candidate
+  starts from, the cases, how long it should take
+- **`/codepraxis:build`** — write it, run it, repair what fails
+- **`/codepraxis:validate`** — check an existing question and fix it
+- a **pack-authoring skill** that loads automatically when Claude touches a
+  question, so it already knows the contract
+
+Re-run with `--force` to overwrite an existing install.
+
+Planning refuses to proceed on a question a model can solve from the brief
+alone. Candidates have an AI agent in the container, so a question that is one
+prompt away from done measures nothing.
+
+## Doing it by hand
+
+The CLI works without Claude:
+
+```bash
+codepraxis new my-question                 # scaffold one that already passes
+codepraxis lint my-question                # static checks, no execution
+codepraxis validate my-question            # run it, fast and advisory
+codepraxis ship my-question                # validates in the runner, then publishes
+codepraxis list                            # your company's questions
+codepraxis edit 214 --open                 # update details, open a preview
+codepraxis ship my-question --challenge-id 214   # publish an edit, not a duplicate
+```
 
 ## Two kinds of checking
 
-| Command | Runs | Cost |
-|---|---|---|
-| `codepraxis lint` | Static rules over the files | milliseconds, no execution |
-| `codepraxis validate` | The tests, against both fixtures | seconds (local) or ~1 min (remote) |
+| Command | Runs | Speed | Counts? |
+|---|---|---|---|
+| `codepraxis lint` | Static rules over the files | milliseconds | Advisory |
+| `codepraxis validate --local` | Pure-Python harness on your machine | seconds | No — advisory |
+| `codepraxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes — gates publish** |
 
-`lint` never imports pack code, so it is safe on a pack you did not write and
-fast enough for every save. It catches things that otherwise only surface inside
-a container — a two-argument `testCases.__init__`, zero-padded case names, a
-`solution/` directory nested inside the pack, LaTeX in the Instructions brief.
-`validate` runs it automatically first and stops if it finds an error, because
-executing a pack whose class cannot be constructed only produces a confusing
-traceback.
+`lint` never imports your code, so it is safe on a question you did not write
+and fast enough for every save.
 
-## The two fixtures
+`--local` reproduces how the runner loads, orders and scores a question, so it
+catches most mistakes in the inner loop. It is **not** the container: it does
+not run `setup.sh` and does not have the image's package set. Anything it
+cannot check is reported as a `note` rather than silently passing. Publishing
+always requires a remote run.
 
-Every pack is validated twice:
+## The rule that matters most
+
+Every question is validated twice:
 
 - **solution** — `source/` overlaid with `solution/`. Must pass everything.
 - **starter** — `source/` alone. Must *fail*.
 
-The starter run is the one authors forget. A pack whose starter already passes
-has tests that do not discriminate, and every candidate will score full marks.
+The starter run is the one authors forget. A question whose starter already
+passes has tests that do not discriminate, and every candidate scores full
+marks.
 
 ```
-askgit  (local)
+webhook-debug  (local)
   solution  18/18 passed
   starter   0/18 passed
   PASSED  8.9s
@@ -104,50 +113,55 @@ askgit  (local)
 
 Three verdicts: **PASSED**, **FAILED**, and **INCONCLUSIVE** (this tier lacked
 the infrastructure to judge it — not a failure, and it does not fail the
-command). `--json` always emits a single document with a `packs` array, however
-many packs ran.
+command). `--json` always emits a single document with a `packs` array.
 
-## Pack layout
+## Questions that call a model
 
-```
-my-challenge/
-├── metadata.json            # {"name": "..."} — becomes the workspace directory
-├── backend.conf             # {"BACKEND": "AI", "LANGUAGE": "PYTHON"}
-├── setup.sh                 # optional; installs dependencies (remote only)
-├── source/                  # what the candidate starts from
-├── ._tests/test_1.py        # a `testCases` class
-└── ._course_data/
-    ├── course_toc.json      # selects the active test module
-    └── feature.md           # the Instructions tab
-solution/                    # sibling, never uploaded — the reference solution
-```
-
-## Authoring with Claude Code
+By default there is no model endpoint locally, so cases that need one are
+reported **unverifiable** rather than failed — a question is not broken just
+because your laptop has no LLM proxy. Point it at a real endpoint and they run
+for real:
 
 ```bash
-codepraxis --install claude-plugin
+export OPENAI_API_KEY=...              # or --llm-api-key
+export OPENAI_BASE_URL=...             # or --llm-base-url
+codepraxis validate my-question
 ```
 
-Writes a local plugin into `.codepraxis/claude-plugin/`, then tells you the two
-commands to enable it. You get:
+Once a key is configured the leniency stops: a model failure is then a real
+failure, because it can be judged.
 
-- **`/codepraxis:new`** — design, build, validate, publish and return a URL
-- **`/codepraxis:validate`** — validate and fix what fails, in a loop
-- **`pack-authoring` skill** — loads automatically when Claude touches a pack,
-  so it already knows the `testCases` contract and the two-fixture rule
+## Layout
 
-Re-run with `--force` to overwrite an existing install.
+```
+challenges/my-question/
+├── spec.md                  the plan — what this tests and why
+├── publish.json             title, difficulty, time limit, tech stack
+├── metadata.json            {"name": "..."} — becomes the workspace directory
+├── backend.conf             {"BACKEND": "AI", "LANGUAGE": "PYTHON"}
+├── setup.sh                 optional; installs dependencies (remote only)
+├── source/                  what the candidate starts from
+├── ._tests/test_1.py        a `testCases` class
+└── ._course_data/
+    ├── course_toc.json      selects the active test module
+    └── feature.md           the Instructions tab
+solution/                    sibling, never uploaded — the reference solution
+```
+
+`setup.sh` runs on **every** container load, not once at build time. Pin your
+versions: an unpinned install resolves to whatever is current that day, and a
+breaking release later fails during a candidate's assessment.
 
 ## Authentication
 
 ```bash
-codepraxis --login
+codepraxis login
 ```
 
-Prompts for an API key (hidden input), verifies it against the platform, and
-stores it at `~/.config/codepraxis/config.json` with `0600` permissions. It
-prints which company the key publishes as — worth reading, because that is what
-every publish is scoped to.
+Prompts for an API key (hidden input), verifies it, and stores it at
+`~/.config/codepraxis/config.json` with `0600` permissions. It prints which
+company the key publishes as — worth reading, because that is what every
+publish is scoped to.
 
 In CI, skip the prompt:
 
@@ -159,64 +173,51 @@ export CODEPRAXIS_API_URL=...        # optional; defaults to the production API
 ## Publishing
 
 ```bash
-codepraxis --publish my-challenge            # draft, with confirmation
-codepraxis --publish my-challenge --live     # straight to candidates
-codepraxis --publish my-challenge --yes      # non-interactive, for CI
+codepraxis ship my-question            # draft, with confirmation
+codepraxis ship my-question --live     # straight to candidates
+codepraxis ship my-question --yes      # non-interactive, for CI
 ```
 
-Publishing is deliberately strict, because a published challenge can be
-assigned to candidates immediately:
+Publishing is deliberately strict, because a published question can be assigned
+to candidates immediately:
 
 - **Remote validation runs first.** Local results never qualify. Reuse an
-  earlier passing run with `--validation-run-id` if you have one.
-- **A reference solution is required.** It is what proves the challenge is
+  earlier passing run with `--validation-run-id`.
+- **A reference solution is required.** It is what proves the question is
   solvable.
 - **It publishes as a draft** unless you pass `--live`.
 - **The company comes from your API key.** The CLI never sends a company id —
-  ownership is derived server-side, so a compromised or mistyped client can't
+  ownership is derived server-side, so a compromised or mistyped client cannot
   publish into someone else's catalog.
-
-You'll be shown the company and asked to confirm before anything is created.
-When the platform can start a preview container, `--publish` prints that URL so
-you can inspect the question immediately.
-
-## Company catalog
-
-```bash
-codepraxis --list
-codepraxis --edit 123 --title "Debug webhook delivery" --status draft
-codepraxis --edit 123 --open
-```
-
-`--list` shows the questions owned by your API key's company, including drafts.
-`--edit` updates question metadata and returns a container URL for inspection.
 
 ### Publishing an edit
 
-Changing the *content* of a question means re-publishing the pack. Pass the
-question's id, or you get a second copy:
+Changing the *content* of a question means re-publishing it. Pass the id, or
+you get a second copy:
 
 ```bash
-codepraxis --publish my-challenge --challenge-id 123
+codepraxis ship my-question --challenge-id 214
 ```
 
-With `--challenge-id` the platform adds a new version to that question and
-keeps its id, assignments and history. Without it, publish always creates a
-new question — which is the right behaviour the first time and a duplicate
-every time after.
+With `--challenge-id` the platform adds a new version and keeps the question's
+id, assignments and history.
 
 ### Deleting
 
 ```bash
-codepraxis --delete 123
+codepraxis delete 214
 ```
 
-Asks first, and the platform refuses outright once the question has been
-assigned to anyone — deleting it then would orphan attempts and reports that
-candidates and reviewers still depend on. To take an assigned question out of
-circulation, set it back to draft with `--edit 123 --status draft`.
-Code changes still go through the pack workflow: edit locally, validate, and
-publish a new version.
+Asks first, and the platform refuses once the question has been assigned to
+anyone — deleting it then would orphan attempts and reports. To take an
+assigned question out of circulation, set it back to draft with
+`codepraxis edit 214 --status draft`.
+
+## Older command forms
+
+`--publish`, `--list`, `--edit`, `--delete`, `--login`, `--install` and
+`--example` still work. They are hidden from help and print a pointer to the
+subcommand that replaced them.
 
 ## Development
 
@@ -226,15 +227,17 @@ pytest
 ruff check src tests scripts
 ```
 
-The package has **no runtime dependencies**. The harness must run on an author's
-machine with nothing but a Python interpreter, so keep it that way — the remote
-tier uses `urllib` from the standard library for the same reason.
+The package has **no runtime dependencies**. The harness must run on an
+author's machine with nothing but a Python interpreter, so keep it that way —
+the remote tier uses `urllib` from the standard library for the same reason.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.
 
 ### Conformance tests
 
 The harness mirrors the production runner's behaviour (`setupCodeBase.py`,
 `koro/test_loader.py`, `koro/test_runner.py`). Mirrors drift, so
-`tests/conformance/` replays the harness across a corpus of real packs and
+`tests/conformance/` replays the harness across a corpus of real questions and
 asserts the expected verdicts.
 
 That corpus is **private and lives outside this repository**:
@@ -245,6 +248,6 @@ PRAXIS_CONFORMANCE_PACKS=/path/to/question-bank pytest tests/conformance
 
 Without the variable the conformance tests skip.
 
-> **Do not vendor packs into this repository.** This package is published
+> **Do not vendor questions into this repository.** This package is published
 > publicly. No challenge content, no reference solutions, no fixtures derived
 > from real questions. Scaffold templates must be written from scratch.

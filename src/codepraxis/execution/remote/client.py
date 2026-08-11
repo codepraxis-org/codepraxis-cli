@@ -145,7 +145,7 @@ class ApiClient:
         detail = str(detail)[:500]
 
         if exc.code == 401:
-            return PraxisError("Authentication failed. Run `codepraxis --login` again.")
+            return PraxisError("Authentication failed. Run `codepraxis login` again.")
         if exc.code == 403:
             return PraxisError(
                 detail or "This API key is not permitted to do that. It may lack the required scope."
