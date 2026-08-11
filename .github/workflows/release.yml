@@ -3,14 +3,16 @@ name: release
 # Publishing is irreversible: a version number on PyPI can never be reused, even
 # after a delete.
 #
-# The org is on GitHub Free, where private repos cannot have environment
-# protection rules (required reviewers). So the human gate is structural
-# instead: a tag only ever reaches TestPyPI, and the real PyPI publish requires
-# someone to deliberately dispatch this workflow and pick `pypi`. There is no
-# path from `git push --tags` to a permanent PyPI release.
+# The gate is a person. The `pypi` environment carries required reviewers, so a
+# tag runs every check, publishes to TestPyPI, and then *waits* for a named
+# maintainer to approve the PyPI upload. Nothing reaches PyPI unattended, and
+# the approval is recorded against whoever gave it.
 #
-# When the org moves to Team, add required reviewers to the `pypi` environment
-# and a tag can be allowed to publish directly again.
+# This is only possible because the repository is public: environment protection
+# rules are unavailable on private repos under GitHub Free. If it is ever made
+# private again, restore the structural gate — set the `pypi` job's condition
+# back to `github.event_name == 'workflow_dispatch' && inputs.target == 'pypi'`
+# — because the reviewer requirement will silently stop being enforced.
 on:
   push:
     tags: ["v*"]
@@ -98,8 +100,10 @@ jobs:
 
   pypi:
     needs: build
-    # Only ever reached by a deliberate manual dispatch.
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'pypi'
+    # A tag reaches this job, but the `pypi` environment has required
+    # reviewers, so it waits for a named human to approve before uploading.
+    # The dispatch path stays for re-publishing a build without a new tag.
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.target == 'pypi'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
