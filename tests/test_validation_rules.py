@@ -32,7 +32,10 @@ class testCases:
 
 
 def build(tmp_path: Path, tests: str = GOOD_TESTS, feature: str = "# demo\n", name: str = "demo") -> Path:
-    pack = tmp_path / "challenges" / name
+    # The wrapper layout: <question>/pack, with the reference solution beside
+    # it. Building packs as top-level directories is what the layout rule
+    # rejects, so fixtures must not do it either.
+    pack = tmp_path / "challenges" / name / "pack"
     (pack / "source").mkdir(parents=True)
     (pack / "._tests").mkdir()
     (pack / "._course_data").mkdir()
@@ -50,6 +53,13 @@ def build(tmp_path: Path, tests: str = GOOD_TESTS, feature: str = "# demo\n", na
 
 def codes(findings):
     return {finding.code for finding in findings}
+
+
+def _plugin_dir() -> Path:
+    """The plugin the repo's own marketplace manifest points at."""
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((repo_root / ".claude-plugin" / "marketplace.json").read_text())
+    return repo_root / manifest["plugins"][0]["source"]
 
 
 def test_a_well_formed_pack_is_clean(tmp_path):
@@ -113,6 +123,108 @@ class TestHygiene:
         assert "pack.forbidden-files" in codes(lint(load_pack(pack)))
 
 
+class TestQuestionLayout:
+    """Two questions must never resolve to the same reference solution.
+
+    The solution is found as the pack's sibling. When packs were themselves the
+    top-level directories, every pack under a shared parent pointed at the same
+    `solution/`, so scaffolding a second question overwrote the first one's
+    reference solution — silently, with no history to recover it from.
+    """
+
+    def _flat_pack(self, tmp_path, name="demo"):
+        """A pack at the top level: the layout that caused the collision."""
+        nested = build(tmp_path, name=name)
+        flat = nested.parent
+        for entry in list(nested.iterdir()):
+            entry.rename(flat / entry.name)
+        nested.rmdir()
+        return flat
+
+    def test_a_top_level_pack_is_an_error(self, tmp_path):
+        findings = lint(load_pack(self._flat_pack(tmp_path)))
+
+        assert "pack.layout" in codes(findings)
+        assert has_errors(findings)
+
+    def test_the_error_says_how_to_migrate(self, tmp_path):
+        findings = lint(load_pack(self._flat_pack(tmp_path)))
+        message = next(f.message for f in findings if f.code == "pack.layout")
+
+        assert "demo/pack/" in message
+        assert "demo/solution/" in message
+
+    def test_it_counts_the_questions_that_would_collide(self, tmp_path):
+        self._flat_pack(tmp_path, name="first")
+        findings = lint(load_pack(self._flat_pack(tmp_path, name="second")))
+        message = next(f.message for f in findings if f.code == "pack.layout")
+
+        assert "2 questions share" in message
+
+    def test_the_wrapper_layout_is_clean(self, tmp_path):
+        assert lint(load_pack(build(tmp_path))) == []
+
+
+class TestScaffoldIsolation:
+    """Scaffolding twice must not touch the first question's solution."""
+
+    def test_two_questions_get_separate_solutions(self, tmp_path):
+        from codepraxis.scaffold.generator import create
+
+        first = create(tmp_path / "challenges", "first_question")
+        second = create(tmp_path / "challenges", "second_question")
+
+        assert first.solution_dir != second.solution_dir
+        assert first.solution_dir.is_dir() and second.solution_dir.is_dir()
+
+    def test_a_non_empty_solution_is_never_overwritten(self, tmp_path):
+        """Even --force stops here: a solution is the proof a question is solvable."""
+        from codepraxis.errors import PraxisError
+        from codepraxis.scaffold.generator import create
+
+        result = create(tmp_path / "challenges", "demo_pack")
+        precious = result.solution_dir / "main.py"
+        precious.write_text("# hand-written reference solution\n")
+
+        with pytest.raises(PraxisError, match="Refusing to write over a reference solution"):
+            create(tmp_path / "challenges", "demo_pack", force=True)
+
+        assert precious.read_text() == "# hand-written reference solution\n"
+
+
+class TestQuestionSelector:
+    """Authors refer to a question by name, not by the literal 'pack' directory."""
+
+    def test_a_question_resolves_by_its_name(self, tmp_path):
+        from codepraxis.packio.discovery import resolve_pack_dir
+
+        build(tmp_path, name="webhook_debug")
+        resolved = resolve_pack_dir(tmp_path / "challenges", "webhook_debug")
+
+        assert resolved.name == "pack"
+        assert resolved.parent.name == "webhook_debug"
+
+    def test_the_question_directory_path_also_works(self, tmp_path):
+        from codepraxis.packio.discovery import resolve_pack_dir
+
+        build(tmp_path, name="webhook_debug")
+        resolved = resolve_pack_dir(tmp_path, "challenges/webhook_debug")
+
+        assert resolved.name == "pack"
+
+    def test_two_questions_do_not_collide_on_the_name_pack(self, tmp_path):
+        """Selecting by directory name would make every question answer to 'pack'."""
+        from codepraxis.packio.discovery import resolve_pack_dir
+
+        build(tmp_path, name="first_question")
+        build(tmp_path, name="second_question")
+
+        first = resolve_pack_dir(tmp_path / "challenges", "first_question")
+        second = resolve_pack_dir(tmp_path / "challenges", "second_question")
+
+        assert first != second
+
+
 class TestInstructions:
     @pytest.mark.parametrize("body", ["Use $x = 1$ here.", "$$E = mc^2$$", r"\(a+b\)", r"Use \frac{a}{b}"])
     def test_latex_is_flagged(self, tmp_path, body):
@@ -151,7 +263,7 @@ class TestScaffold:
         from codepraxis.scaffold.generator import create, normalize_name
 
         assert normalize_name("My-Great Pack") == "my_great_pack"
-        assert create(tmp_path / "c", "My-Great Pack").pack_dir.name == "my_great_pack"
+        assert create(tmp_path / "c", "My-Great Pack").question_dir.name == "my_great_pack"
 
     @pytest.mark.parametrize("bad", ["a", "9lives", "", "!!"])
     def test_unusable_names_are_rejected(self, tmp_path, bad):
@@ -273,6 +385,42 @@ class TestPluginInstructions:
         assert manifest["name"] == installer.LOCAL_NAME
         assert manifest["name"] != installer.HOSTED_NAME
         assert manifest["plugins"][0]["source"] == "./plugin"
+
+    def test_plan_cannot_see_the_build_instructions(self):
+        """The failure this whole split exists to prevent.
+
+        When planning and building were steps 1 and 2 of one command file, an
+        agent read "write down the architecture" as an internal note, never
+        stopped, and went straight into scaffolding and writing pack files. A
+        model does everything it can see: if the planning prompt contains the
+        implementation steps, it drifts into them. Separate files, and the
+        planning one must not describe how to build.
+        """
+        commands = _plugin_dir() / "commands"
+        plan = (commands / "plan.md").read_text()
+
+        forbidden = ["codepraxis new", "codepraxis ship", "._tests/test_1.py", "setup.sh at the pack root"]
+        leaked = [phrase for phrase in forbidden if phrase in plan]
+        assert not leaked, f"plan.md describes building: {leaked}"
+
+    def test_plan_cannot_edit_files(self):
+        """Tool scoping is the backstop for when the wording fails."""
+        plan = (_plugin_dir() / "commands" / "plan.md").read_text()
+        allowed = next(line for line in plan.splitlines() if line.startswith("allowed-tools:"))
+
+        assert "Edit" not in allowed, "planning must not be able to modify existing files"
+
+    def test_build_refuses_without_an_approved_plan(self):
+        build = (_plugin_dir() / "commands" / "build.md").read_text()
+
+        assert "status: approved" in build
+        assert "stop" in build.lower()
+
+    def test_every_lifecycle_command_exists(self):
+        commands = _plugin_dir() / "commands"
+        present = {path.stem for path in commands.glob("*.md")}
+
+        assert present == {"plan", "build", "try", "ship", "edit"}
 
     def test_the_repository_marketplace_points_at_a_real_plugin(self):
         """The hosted marketplace is served from the repo root.

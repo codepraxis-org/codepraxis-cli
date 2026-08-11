@@ -35,12 +35,36 @@ REQUIRED_PACK_PATHS = (
     f"{COURSE_DATA_DIR}/feature.md",
 )
 
-# --- Authoring-side files --------------------------------------------------
-# Neither of these is read by the runner; both live in the pack because the
-# author needs them in version control next to the code they describe.
+# --- Question layout -------------------------------------------------------
+# A *question* is a wrapper directory; the *pack* is what the runner mounts.
+#
+#   challenges/webhook_debug/     <- the question
+#     spec.md                     <- the plan, describes the whole question
+#     pack/                       <- mounted by the runner
+#       metadata.json, source/, ._tests/, ._course_data/, publish.json
+#     solution/                   <- reference solution, never packaged
+#
+# The wrapper exists because the solution is resolved as the pack's sibling.
+# When packs were the top-level directories, every pack under `challenges/`
+# resolved to the *same* `challenges/solution`, so scaffolding a second
+# question wrote into the first one's reference solution — silently, and with
+# no git history in a fresh scaffold to recover from. Giving each question its
+# own directory makes that collision impossible rather than merely unlikely.
 
-#: The plan, written before any code and reviewed by whoever signs the question
+#: The pack directory inside a question. Its name never reaches the container:
+#: the workspace directory comes from metadata.json "name".
+PACK_DIR = "pack"
+
+#: The reference solution, a sibling of the pack inside the question directory.
+SOLUTION_DIR = "solution"
+
+# --- Authoring-side files --------------------------------------------------
+# Neither of these is read by the runner. They live in version control beside
+# the code they describe because the author, not the runner, needs them.
+
+#: The plan, written before any code and approved by whoever signs the question
 #: off. Also what an edit reads months later to recover the original intent.
+#: Lives at the *question* level: it describes the question, not just the pack.
 SPEC_FILE = "spec.md"
 
 #: Catalog identity — challenge id, title, difficulty, time limit, tech stack.

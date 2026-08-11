@@ -33,16 +33,17 @@ A question is a directory: starter code, a test module, instructions.
 ## The steps
 
 ```
-plan  →  build  →  try  →  ship
+plan  →  approve  →  build  →  try  →  ship
 ```
 
 | | |
 |---|---|
 | **plan** | Talk it through, agree what to test. No code yet. |
+| **approve** | Accept the plan. Nothing is built until you do. |
 | **build** | Claude writes the question, tests it, and fixes what fails. |
 | **try** | Open it exactly as a candidate would. Nothing published. |
 | **ship** | Publish as a draft, then go live. |
-| **edit** | Pull one back down to change it later. |
+| **edit** | Change one later. |
 
 Run `codepraxis` at any point to see where you are and what to type next.
 
@@ -58,11 +59,23 @@ prompt improvements arrive on the next marketplace refresh without a CLI
 upgrade. You get:
 
 - **`/codepraxis:plan`** — design a question: what it tests, what the candidate
-  starts from, the cases, how long it should take
+  starts from, the cases, how long it should take. Writes a plan and stops.
 - **`/codepraxis:build`** — write it, run it, repair what fails
-- **`/codepraxis:validate`** — check an existing question and fix it
-- a **pack-authoring skill** that loads automatically when Claude touches a
-  question, so it already knows the contract
+- **`/codepraxis:try`** — open it the way a candidate gets it
+- **`/codepraxis:ship`** — publish as a draft and return the link
+- **`/codepraxis:edit`** — change an existing question and publish a new version
+- two skills that load automatically: **pack-contract** (what the runner
+  requires) and **question-design** (what makes a question worth asking)
+
+Planning writes `spec.md` and stops. Building is blocked until you accept it:
+
+```bash
+codepraxis approve my-question
+```
+
+That is a command rather than a "yes" in chat because the plan outlives the
+conversation — a later session, another machine, or a colleague running the
+build has no access to what was agreed.
 
 Planning refuses to proceed on a question a model can solve from the brief
 alone. Candidates have an AI agent in the container, so a question that is one
@@ -147,17 +160,22 @@ failure, because it can be judged.
 ```
 challenges/my-question/
 ├── spec.md                  the plan — what this tests and why
-├── publish.json             title, difficulty, time limit, tech stack
-├── metadata.json            {"name": "..."} — becomes the workspace directory
-├── backend.conf             {"BACKEND": "AI", "LANGUAGE": "PYTHON"}
-├── setup.sh                 optional; installs dependencies (remote only)
-├── source/                  what the candidate starts from
-├── ._tests/test_1.py        a `testCases` class
-└── ._course_data/
-    ├── course_toc.json      selects the active test module
-    └── feature.md           the Instructions tab
-solution/                    sibling, never uploaded — the reference solution
+├── pack/                    what the runner mounts
+│   ├── metadata.json        {"name": "..."} — becomes the workspace directory
+│   ├── backend.conf         {"BACKEND": "AI", "LANGUAGE": "PYTHON"}
+│   ├── publish.json         title, difficulty, time limit, tech stack
+│   ├── setup.sh             optional; installs dependencies
+│   ├── source/              what the candidate starts from
+│   ├── ._tests/test_1.py    a `testCases` class
+│   └── ._course_data/
+│       ├── course_toc.json  selects the active test module
+│       └── feature.md       the Instructions tab
+└── solution/                never uploaded — the reference solution
 ```
+
+Every question gets its own directory. The reference solution is found as the
+pack's sibling, so questions sharing a parent would resolve to the same
+`solution/` — which is how one question's answer gets overwritten by another's.
 
 `setup.sh` runs on **every** container load, not once at build time. Pin your
 versions: an unpinned install resolves to whatever is current that day, and a

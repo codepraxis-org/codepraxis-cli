@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..domain import contract
+from ..domain import spec as spec_module
 from ..execution.remote import config as remote_config
 from ..packio import discovery
 from ..plugin import installer
@@ -34,7 +35,9 @@ _TEST_CASE_DEF = re.compile(rf"^\s*def\s+{contract.TEST_CASE_PREFIX}", re.MULTIL
 @dataclass(frozen=True)
 class PackStatus:
     path: Path
+    question_dir: Path
     has_spec: bool
+    spec_approved: bool
     complete: bool
     missing: list[str]
     has_solution: bool
@@ -43,23 +46,34 @@ class PackStatus:
     published_status: str | None
 
     @property
+    def name(self) -> str:
+        return self.question_dir.name
+
+    @property
     def next_command(self) -> str:
-        rel = _display(self.path)
         if not self.has_spec:
-            return f"codepraxis plan          # {rel} has no {contract.SPEC_FILE}"
+            return f"codepraxis plan          # {self.name} has no {contract.SPEC_FILE}"
+        if not self.spec_approved:
+            return f"codepraxis approve {self.name}"
         if not self.complete:
-            return f"codepraxis build         # {rel} is missing {', '.join(self.missing)}"
+            return f"codepraxis build         # {self.name} is missing {', '.join(self.missing)}"
         if not self.has_solution:
-            return f"codepraxis build         # {rel} has no reference solution"
+            return f"codepraxis build         # {self.name} has no reference solution"
         if self.challenge_id is None:
-            return f"codepraxis validate {rel}"
+            return f"codepraxis validate {self.name}"
         if self.published_status == "draft":
-            return f"codepraxis ship --live {rel}"
+            return f"codepraxis ship --live {self.name}"
         return f"codepraxis edit {self.challenge_id}"
 
 
 def inspect_pack(path: Path) -> PackStatus:
     missing = [rel for rel in contract.REQUIRED_PACK_PATHS if not (path / rel).exists()]
+
+    # spec.md and the solution live at the question level, beside the pack —
+    # the spec describes the whole question, and keeping the solution out of
+    # the pack is what stops it being packaged for candidates.
+    question_dir = path.parent if path.name == contract.PACK_DIR else path
+    plan = spec_module.read(question_dir)
 
     challenge_id: int | None = None
     published_status: str | None = None
@@ -75,12 +89,12 @@ def inspect_pack(path: Path) -> PackStatus:
 
     return PackStatus(
         path=path,
-        has_spec=(path / contract.SPEC_FILE).is_file(),
+        question_dir=question_dir,
+        has_spec=plan is not None,
+        spec_approved=plan is not None and plan.approved,
         complete=not missing,
         missing=missing,
-        # The solution is a sibling of the pack, never inside it, so that it is
-        # not packaged and shipped to a candidate.
-        has_solution=(path.parent / "solution").is_dir(),
+        has_solution=(question_dir / contract.SOLUTION_DIR).is_dir(),
         case_count=_count_cases(path),
         challenge_id=challenge_id,
         published_status=published_status,
@@ -136,9 +150,13 @@ def _print_empty() -> None:
 
 
 def _print_pack(pack: PackStatus) -> None:
-    print(f"  {_display(pack.path)}")
+    print(f"  {_display(pack.question_dir)}")
 
-    print(f"    plan        {'ready' if pack.has_spec else 'no ' + contract.SPEC_FILE}")
+    if not pack.has_spec:
+        plan_state = f"no {contract.SPEC_FILE}"
+    else:
+        plan_state = "approved" if pack.spec_approved else "waiting for approval"
+    print(f"    plan        {plan_state}")
 
     if pack.complete:
         detail = f"{pack.case_count} cases" if pack.case_count else "complete"

@@ -50,6 +50,55 @@ class SolutionInsidePackRule:
         return findings
 
 
+class QuestionLayoutRule:
+    """A pack must live at ``<question>/pack``, with its solution beside it.
+
+    The reference solution is resolved as the pack's sibling. When packs were
+    themselves the top-level directories, every pack under a shared parent
+    resolved to the *same* ``solution/`` — so scaffolding a second question
+    wrote into the first one's reference solution, silently, with no history to
+    recover from. This is an error rather than a warning because the failure it
+    prevents destroys work.
+    """
+
+    code = "pack.layout"
+
+    def check(self, pack: Pack) -> Iterable[Diagnostic]:
+        if pack.root.name == contract.PACK_DIR:
+            return []
+
+        name = pack.root.name
+        siblings = sorted(
+            entry.name
+            for entry in pack.root.parent.iterdir()
+            if entry.is_dir() and entry != pack.root and (entry / contract.METADATA_FILE).is_file()
+        )
+
+        detail = (
+            f" {len(siblings) + 1} questions share {pack.root.parent}/{contract.SOLUTION_DIR}, "
+            f"so building any one of them overwrites the others' reference solutions."
+            if siblings
+            else ""
+        )
+
+        return [
+            Diagnostic(
+                Severity.ERROR,
+                self.code,
+                (
+                    f"{name}/ is a pack at the top level, but a pack must sit inside a question "
+                    f"directory as {name}/{contract.PACK_DIR}/, with its reference solution at "
+                    f"{name}/{contract.SOLUTION_DIR}/.{detail} "
+                    f"To migrate: mkdir {name}/{contract.PACK_DIR} and move the pack contents "
+                    f"({contract.METADATA_FILE}, {contract.BACKEND_CONF_FILE}, {contract.SOURCE_DIR}/, "
+                    f"{contract.TESTS_DIR}/, {contract.COURSE_DATA_DIR}/) into it, then move the "
+                    f"reference solution to {name}/{contract.SOLUTION_DIR}/."
+                ),
+                str(pack.root),
+            )
+        ]
+
+
 class ForbiddenFilesRule:
     """Build artefacts and misplaced dependency files."""
 

@@ -25,19 +25,27 @@ is about making the good version the easy one.
 ## The core idea: a question is a folder
 
 ```
-challenges/webhook-debug/
-  spec.md              the plan — what this tests and why
-  publish.json         catalog identity — id, title, difficulty, time limit
-  metadata.json        the workspace directory name
-  backend.conf         question type and language
-  setup.sh             installs what the question needs
-  source/              what the candidate starts from
-  ._tests/test_1.py    the tests, which the candidate never sees
-  ._course_data/
-    course_toc.json    picks the active test module
-    feature.md         the instructions tab
-solution/              the reference solution — a SIBLING, never inside
+challenges/webhook-debug/        one directory per question
+  spec.md                        the plan — what this tests and why
+  pack/                          what the runner mounts
+    metadata.json                the workspace directory name
+    backend.conf                 question type and language
+    publish.json                 catalog identity — id, title, difficulty
+    setup.sh                     installs what the question needs
+    source/                      what the candidate starts from
+    ._tests/test_1.py            the tests, which the candidate never sees
+    ._course_data/
+      course_toc.json            picks the active test module
+      feature.md                 the instructions tab
+  solution/                      the reference answer, never packaged
 ```
+
+**Every question gets its own directory, and that is load-bearing.** The
+reference solution is resolved as the pack's sibling. When packs were themselves
+the top-level directories, every pack under `challenges/` resolved to the *same*
+`challenges/solution` — so scaffolding a second question wrote into the first
+one's reference solution, silently, with no history in a fresh scaffold to
+recover from. A lint rule now rejects the old shape and says how to migrate.
 
 Two files are ours, not the runner's. `spec.md` is the plan, kept in version
 control beside the code it describes so that an edit six months later can
@@ -64,23 +72,49 @@ is not measuring anything.
 ## The lifecycle
 
 ```
-plan  →  build  →  review  →  try  →  ship  →  edit
+plan  →  approve  →  build  →  try  →  ship  →  edit
 ```
 
 | Step | What happens | Where it runs |
 |---|---|---|
 | **plan** | Talk it through, agree what to test, write `spec.md`. No code. | Claude, via the plugin |
-| **build** | Write the pack, tests, setup script and reference solution. | Claude, via the plugin |
-| **review** | Audit the result and repair what fails. Runs inside build. | Claude + CLI checks |
+| **approve** | Record that a human accepted the plan. | CLI |
+| **build** | Write the pack, tests, setup script and reference solution, then audit and repair. | Claude, via the plugin |
 | **try** | Open it exactly as a candidate would. Nothing published. | CLI → platform |
 | **ship** | Publish as a draft, then promote to live. | CLI → platform |
 | **edit** | Pull a question back down, change it, publish a new version. | CLI → platform |
 
-Two of those steps are Claude workflows and four are CLI operations. That split
-matters: **judgement lives in the plugin, mechanics live in the CLI.** Deciding
-whether a question is any good is not something a Python function can do.
-Deciding whether the tests pass is not something a language model should be
-trusted with.
+Judgement lives in the plugin; mechanics live in the CLI. Deciding whether a
+question is any good is not something a Python function can do. Deciding whether
+the tests pass is not something a language model should be trusted with.
+
+### Why planning and building are separate commands
+
+They used to be steps 1 and 2 of a single command, and that did not hold. An
+agent read *"write down the question architecture"* as an internal note, never
+stopped, and went from research straight through scaffolding into writing pack
+files — with no plan ever shown to the user.
+
+The lesson is that **wording is not a gate**. An agent that has just done ten
+tool calls of research has enormous momentum toward implementing, and stopping
+reads as failing to finish. Four things enforce the boundary instead:
+
+1. **A command boundary is a turn boundary.** Planning ends, the turn ends,
+   the user types the next thing. There is nothing after it to do.
+2. **The planning prompt does not contain the build instructions.** A model does
+   everything it can see; if it can read step 2, it drifts into step 2. A test
+   asserts `plan.md` never mentions scaffolding.
+3. **Tool scoping.** Planning has no `Edit`, so it cannot modify existing files
+   even if it decides to.
+4. **The CLI refuses.** `ship` requires a spec marked approved, so even an agent
+   invoked directly with no plugin context hits a wall.
+
+### Approval is state on disk, not a moment in a conversation
+
+`codepraxis approve` writes `status: approved` into the spec's frontmatter. A
+"yes" in chat leaves no trace: compact the transcript, or run the next step in a
+fresh session, on another machine, or as a colleague, and there is nothing left
+to check. A file survives all three, and records when it happened.
 
 ---
 

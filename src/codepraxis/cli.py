@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .commands import approve as approve_command
 from .commands import catalog as catalog_command
 from .commands import example as example_command
 from .commands import guide as guide_command
@@ -67,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_guide(subparsers)
     _add_login(subparsers)
     _add_new(subparsers)
+    _add_approve(subparsers)
     _add_lint(subparsers)
     _add_validate(subparsers)
     _add_ship(subparsers)
@@ -118,6 +120,21 @@ def _add_new(subparsers) -> None:
     cmd.add_argument("--language", default="PYTHON", help="LANGUAGE value.")
     cmd.add_argument("--force", action="store_true", help="Overwrite an existing directory.")
     cmd.set_defaults(handler=_handle_new)
+
+
+def _add_approve(subparsers) -> None:
+    cmd = subparsers.add_parser(
+        "approve",
+        help="Accept a question's plan so it can be built.",
+        description=(
+            "Records approval in the plan itself. Building is blocked until this "
+            "runs, because a plan agreed only in conversation leaves nothing for a "
+            "later session, another machine, or a colleague to check."
+        ),
+    )
+    cmd.add_argument("selector", nargs="?", help="Question name or directory. Defaults to the one waiting.")
+    cmd.add_argument("--root", type=Path, default=None, help="Directory to search.")
+    cmd.set_defaults(handler=lambda args: approve_command.run(args.root or Path.cwd(), args.selector))
 
 
 def _add_lint(subparsers) -> None:

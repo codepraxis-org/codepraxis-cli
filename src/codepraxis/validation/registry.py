@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.results import Diagnostic, Severity
 from .rule import Rule
-from .rules.hygiene import ForbiddenFilesRule, SolutionInsidePackRule
+from .rules.hygiene import ForbiddenFilesRule, QuestionLayoutRule, SolutionInsidePackRule
 from .rules.instructions import InstructionsNotationRule
 from .rules.testcases import ConstructorArityRule, TestCaseNamingRule
 
@@ -19,6 +19,7 @@ from .rules.testcases import ConstructorArityRule, TestCaseNamingRule
 _RULES: list[Rule] = [
     ConstructorArityRule(),
     TestCaseNamingRule(),
+    QuestionLayoutRule(),
     SolutionInsidePackRule(),
     ForbiddenFilesRule(),
     InstructionsNotationRule(),

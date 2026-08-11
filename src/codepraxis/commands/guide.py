@@ -30,12 +30,17 @@ codepraxis — build real-world coding assessments
   THE STEPS
 
     plan      talk it through, agree what to test
+    approve   accept the plan — nothing is built until you do
     build     Claude writes and tests the question
     try       open it exactly as a candidate would
     ship      publish as a draft, then go live
-    edit      pull one back to change it later
+    edit      change one later
 
     Run `codepraxis` any time to see where you are.
+
+    Planning writes a plan and stops. Read it, then:
+
+        codepraxis approve my-question
 
   WORKING WITH CLAUDE CODE
 
@@ -47,9 +52,11 @@ codepraxis — build real-world coding assessments
 
     Then you get:
 
-        /codepraxis:plan       design a question, no code yet
-        /codepraxis:build      write it, test it, fix it
-        /codepraxis:validate   check an existing pack and repair it
+        /codepraxis:plan    design a question, no code yet
+        /codepraxis:build   write it, test it, fix it
+        /codepraxis:try     open it as a candidate would
+        /codepraxis:ship    publish as a draft
+        /codepraxis:edit    change an existing one
 
     Without the plugin the CLI still works on its own:
     `codepraxis new`, `validate`, `ship`, `list`, `edit`.

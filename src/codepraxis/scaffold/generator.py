@@ -28,6 +28,7 @@ KNOWN_BACKENDS = ("AI", "DSA", "EMB", "LNX")
 
 @dataclass(frozen=True)
 class ScaffoldResult:
+    question_dir: Path
     pack_dir: Path
     solution_dir: Path
     files: list
@@ -70,11 +71,11 @@ def create(
     language: str = "PYTHON",
     force: bool = False,
 ) -> ScaffoldResult:
-    """Write a new pack under ``root`` and return what was created.
+    """Write a new question under ``root`` and return what was created.
 
-    The pack directory and its ``solution/`` sibling are laid out the way the
-    tooling expects: the solution is *beside* the pack so it can never be
-    packaged and shipped to a candidate.
+    Each question gets its own directory holding the pack and the reference
+    solution as siblings, so two questions can never resolve to the same
+    ``solution/``.
     """
     name = normalize_name(raw_name)
     backend = backend.strip().upper()
@@ -83,11 +84,22 @@ def create(
     if backend not in KNOWN_BACKENDS:
         raise PraxisError(f"Unknown BACKEND {backend!r}. Expected one of: {', '.join(KNOWN_BACKENDS)}")
 
-    pack_dir = (root / name).resolve()
-    solution_dir = pack_dir.parent / "solution"
+    question_dir = (root / name).resolve()
+    pack_dir = question_dir / contract.PACK_DIR
+    solution_dir = question_dir / contract.SOLUTION_DIR
 
-    if pack_dir.exists() and not force:
-        raise PraxisError(f"{pack_dir} already exists. Choose another name, or pass --force.")
+    if question_dir.exists() and not force:
+        raise PraxisError(f"{question_dir} already exists. Choose another name, or pass --force.")
+
+    # Even with --force, never write over a solution that has content. A
+    # reference solution is the only proof a question is solvable, it is often
+    # the most expensive thing in the directory, and a fresh scaffold has no
+    # git history to recover it from.
+    if solution_dir.is_dir() and any(solution_dir.iterdir()):
+        raise PraxisError(
+            f"{solution_dir} already exists and is not empty. Refusing to write over a "
+            f"reference solution. Move it aside first, or scaffold under another name."
+        )
 
     written = []
 
@@ -110,7 +122,12 @@ def create(
     # The reference solution overlays source/, so it mirrors those paths.
     write(solution_dir / "main.py", _render("solution.py", name, backend, language))
 
-    return ScaffoldResult(pack_dir=pack_dir, solution_dir=solution_dir, files=written)
+    return ScaffoldResult(
+        question_dir=question_dir,
+        pack_dir=pack_dir,
+        solution_dir=solution_dir,
+        files=written,
+    )
 
 
 def describe(result: ScaffoldResult, root: Path) -> str:
@@ -120,20 +137,24 @@ def describe(result: ScaffoldResult, root: Path) -> str:
         except ValueError:
             return str(path)
 
+    name = result.question_dir.name
     return "\n".join(
         [
-            f"Created {relative(result.pack_dir)} ({len(result.files)} files)",
-            f"  solution: {relative(result.solution_dir)}  (beside the pack — never uploaded)",
+            f"Created {relative(result.question_dir)} ({len(result.files)} files)",
+            "",
+            f"  {name}/",
+            f"    {contract.PACK_DIR}/         what the candidate gets, and how it is graded",
+            f"    {contract.SOLUTION_DIR}/     the reference answer — never uploaded",
             "",
             "It already validates. Check your setup:",
             "",
-            f"  codepraxis validate --local {result.pack_dir.name}",
+            f"  codepraxis validate {name}",
             "",
             "Then make it your own:",
             "",
-            "  ._course_data/feature.md   what the candidate reads",
-            "  source/                    what they start from",
-            "  ._tests/test_1.py          how it is graded",
-            "  ../solution/               the reference answer",
+            f"  {contract.PACK_DIR}/{contract.COURSE_DATA_DIR}/feature.md   what the candidate reads",
+            f"  {contract.PACK_DIR}/{contract.SOURCE_DIR}/                    what they start from",
+            f"  {contract.PACK_DIR}/{contract.TESTS_DIR}/test_1.py          how it is graded",
+            f"  {contract.SOLUTION_DIR}/                        the reference answer",
         ]
     )

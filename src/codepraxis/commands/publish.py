@@ -19,6 +19,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from ..domain import spec
 from ..domain.results import Fixture
 from ..errors import PraxisError
 from ..execution.remote.client import ApiClient
@@ -49,7 +50,14 @@ def run(
             "Refusing to publish every pack it can find."
         )
 
-    pack = load_pack(resolve_pack_dir(root, selector))
+    pack_dir = resolve_pack_dir(root, selector)
+
+    # A published question can be sent to candidates immediately, so it must
+    # trace back to a plan someone signed off on. This also stops a question
+    # that skipped planning entirely from reaching the catalog.
+    spec.require_approved(pack_dir)
+
+    pack = load_pack(pack_dir)
 
     if not pack.has_solution:
         raise PraxisError(

@@ -34,8 +34,16 @@ class testCases:
 '''
 
 
-def build_pack(root: Path, name: str = "demo", with_solution: bool = True) -> Path:
-    pack = root / "challenges" / name
+def build_pack(
+    root: Path,
+    name: str = "demo",
+    with_solution: bool = True,
+    approved: bool = True,
+) -> Path:
+    # The wrapper layout: <question>/pack, with the solution and the plan
+    # beside it at the question level.
+    question = root / "challenges" / name
+    pack = question / "pack"
     (pack / "source").mkdir(parents=True)
     (pack / "._tests").mkdir()
     (pack / "._course_data").mkdir()
@@ -49,8 +57,13 @@ def build_pack(root: Path, name: str = "demo", with_solution: bool = True) -> Pa
         json.dumps({"instruction_1": {"file": "feature.md", "metadata": {"STATUS": "IN_PROGRESS"}}})
     )
 
+    status = "approved" if approved else "draft"
+    (question / "spec.md").write_text(
+        f"---\nquestion: {name}\nstatus: {status}\n---\n\n# {name}\n\nWhat this tests.\n"
+    )
+
     if with_solution:
-        solution = pack.parent / "solution"
+        solution = question / "solution"
         solution.mkdir()
         (solution / "answer.py").write_text("VALUE = 1\n")
 
@@ -317,3 +330,83 @@ class TestDelete:
         with pytest.raises(PraxisError, match="not a terminal"):
             catalog.delete_question(7, client=client)
         assert client.deleted == []
+
+
+class TestPlanApproval:
+    """Publishing must trace back to a plan a human accepted.
+
+    A published question can be assigned to candidates immediately, so the gate
+    is state on disk rather than a "yes" in chat: the transcript where approval
+    was given is not available to a later session, another machine, or a
+    colleague running the publish.
+    """
+
+    def test_an_unapproved_plan_blocks_publishing(self, tmp_path):
+        build_pack(tmp_path, approved=False)
+        client = FakeClient()
+
+        with pytest.raises(PraxisError, match="has not been approved"):
+            publish.run(tmp_path, "demo", reporter=NullReporter(), assume_yes=True, client=client)
+
+    def test_a_missing_plan_blocks_publishing(self, tmp_path):
+        pack = build_pack(tmp_path)
+        (pack.parent / "spec.md").unlink()
+        client = FakeClient()
+
+        with pytest.raises(PraxisError, match="no spec.md"):
+            publish.run(tmp_path, "demo", reporter=NullReporter(), assume_yes=True, client=client)
+
+    def test_the_refusal_names_the_command_that_unblocks_it(self, tmp_path):
+        """A gate an author cannot get past is a gate they work around."""
+        build_pack(tmp_path, approved=False)
+
+        with pytest.raises(PraxisError) as caught:
+            publish.run(tmp_path, "demo", reporter=NullReporter(), assume_yes=True, client=FakeClient())
+
+        assert "codepraxis approve demo" in str(caught.value)
+
+    def test_approving_then_publishing_works(self, tmp_path):
+        from codepraxis.commands import approve
+
+        build_pack(tmp_path, approved=False)
+        approve.run(tmp_path, "demo")
+
+        client = FakeClient()
+        exit_code = publish.run(
+            tmp_path,
+            "demo",
+            reporter=NullReporter(),
+            assume_yes=True,
+            validation_run_id="vr_1",
+            client=client,
+        )
+
+        assert exit_code == 0
+        assert client.posted[0][0] == "/challenges"
+
+    def test_approval_survives_a_reread(self, tmp_path):
+        """Approval is on disk, so a fresh process sees it."""
+        from codepraxis.commands import approve
+        from codepraxis.domain import spec
+
+        build_pack(tmp_path, approved=False)
+        question = tmp_path / "challenges" / "demo"
+
+        assert not spec.read(question).approved
+        approve.run(tmp_path, "demo")
+        assert spec.read(question).approved
+        assert spec.read(question).approved_at
+
+    def test_approving_preserves_the_plan_body(self, tmp_path):
+        """Rewriting frontmatter must never touch what the author wrote."""
+        from codepraxis.commands import approve
+        from codepraxis.domain import spec
+
+        build_pack(tmp_path, approved=False)
+        question = tmp_path / "challenges" / "demo"
+        (question / "spec.md").write_text(
+            "---\nstatus: draft\n---\n\n# Plan\n\nSignal: can they debug a retry loop.\n"
+        )
+
+        approve.run(tmp_path, "demo")
+        assert "Signal: can they debug a retry loop." in spec.read(question).body

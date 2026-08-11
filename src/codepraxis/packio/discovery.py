@@ -71,25 +71,39 @@ def find_packs(root: Path) -> list[Path]:
     return list(iter_packs(root))
 
 
+def question_name(pack_dir: Path) -> str:
+    """The name an author refers to a pack by.
+
+    Packs live at ``<question>/pack``, so the useful handle is the question
+    directory. Selecting by the literal directory name would make every
+    question in a repo answer to ``pack``.
+    """
+    if pack_dir.name == contract.PACK_DIR:
+        return pack_dir.parent.name
+    return pack_dir.name
+
+
 def resolve_pack_dir(root: Path, selector: str) -> Path:
     """Resolve a user-supplied selector to a single pack directory.
 
-    ``selector`` may be a path or a pack directory name (its slug).
+    ``selector`` may be a path to either the question or the pack inside it,
+    or the question's name.
     """
     from ..errors import PackError
 
-    as_path = (root / selector).expanduser()
-    if looks_like_pack(as_path):
-        return as_path.resolve()
+    for candidate in ((root / selector).expanduser(), Path(selector).expanduser()):
+        if looks_like_pack(candidate):
+            return candidate.resolve()
+        # A path to the question directory is the natural thing to type, and
+        # the pack is one predictable level below it.
+        nested = candidate / contract.PACK_DIR
+        if looks_like_pack(nested):
+            return nested.resolve()
 
-    direct = Path(selector).expanduser()
-    if looks_like_pack(direct):
-        return direct.resolve()
-
-    matches = [p for p in iter_packs(root) if p.name == selector]
+    matches = [p for p in iter_packs(root) if question_name(p) == selector]
     if len(matches) == 1:
         return matches[0]
     if not matches:
-        raise PackError(f"No pack named {selector!r} found under {root}")
+        raise PackError(f"No question named {selector!r} found under {root}")
     listed = "\n  ".join(str(m) for m in matches)
     raise PackError(f"{selector!r} is ambiguous; matched:\n  {listed}")
