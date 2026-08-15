@@ -58,14 +58,21 @@ The same two lines on every machine — no paths, nothing to keep in sync, and
 prompt improvements arrive on the next marketplace refresh without a CLI
 upgrade. You get:
 
-- **`/codepraxis:plan`** — design a question: what it tests, what the candidate
-  starts from, the cases, how long it should take. Writes a plan and stops.
+- **`/codepraxis:plan`** — find real code to build on, agree what it tests,
+  and write the plan. Stops there.
 - **`/codepraxis:build`** — write it, run it, repair what fails
-- **`/codepraxis:try`** — open it the way a candidate gets it
 - **`/codepraxis:ship`** — publish as a draft and return the link
+
+Used whenever you want them:
+
+- **`/codepraxis:try`** — open it the way a candidate gets it
+- **`/codepraxis:evaluate`** — is the question any good, and how far does a
+  model get from the brief alone
 - **`/codepraxis:edit`** — change an existing question and publish a new version
-- two skills that load automatically: **pack-contract** (what the runner
-  requires) and **question-design** (what makes a question worth asking)
+
+Three skills load automatically: **pack-contract** (what the runner requires),
+**question-design** (what makes a question worth asking) and
+**question-evaluation** (how to judge one).
 
 Planning writes `spec.md` and stops. Building is blocked until you accept it:
 
@@ -91,6 +98,7 @@ with the hosted one.
 The CLI works without Claude:
 
 ```bash
+codepraxis find-repos "tool calling agent" # find real code to build on
 codepraxis new my-question                 # scaffold one that already passes
 codepraxis lint my-question                # static checks, no execution
 codepraxis validate my-question            # run it, fast and advisory
@@ -127,6 +135,16 @@ Every question is validated twice:
 The starter run is the one authors forget. A question whose starter already
 passes has tests that do not discriminate, and every candidate scores full
 marks.
+
+A third fixture is available on request:
+
+- **attempt** — `source/` overlaid with `.attempt/`, someone's try at the
+  question. `codepraxis validate <q> --fixture attempt`
+
+It has no expectation attached. Where solution and starter check the pack is
+sound, this measures how far a model gets from the brief alone — and passing
+*fewer* cases is the good outcome, because it means the question cannot be
+answered by reading it.
 
 ```
 webhook-debug  (local)

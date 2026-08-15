@@ -143,10 +143,21 @@ because producing a polished plan for the wrong question wastes everyone's time.
 Candidates have an AI agent and an LLM endpoint inside the container. So a
 question a model answers from the brief alone is not an assessment.
 
-The draft brief is handed to a model, cold, and the attempt is judged against
-the case table. If it solves it, **the plan stops** and Claude says which
-property made it trivial. Partial success is the target. A total miss usually
-means the brief is unclear rather than the question being hard.
+The brief is handed to a model, cold, and the attempt is judged against the
+case table. Partial success is the target. A total miss usually means the brief
+is unclear rather than the question being hard.
+
+Two things make this a measurement rather than a formality.
+
+**It runs in a clean subagent.** The context that designed the question holds
+every decision behind it, and by build time it has read the solution. Its own
+attempt would prove nothing, however sincerely it tried.
+
+**Once a pack exists, the attempt is scored by the real tests.** It is written
+to `.attempt/` and run through the `attempt` fixture, so the result is
+`passed 1 of 3` rather than an opinion. The spec's `difficulty` is derived from
+that number — with AI in the container, "how hard is this" and "how well does a
+model do on it" are the same question.
 
 What survives the probe, strongest first: context the model has never seen
 (your repo, your schema quirk, your log format), debugging rather than
