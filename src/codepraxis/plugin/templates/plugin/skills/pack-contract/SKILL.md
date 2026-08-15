@@ -130,11 +130,38 @@ def test_case_7(self, override=2):
             [["agent.py"], "Is the retry a considered choice, or incidental?"])
 ```
 
-`files` accepts several files, a single file (`["agent.py"]`), or a dict keyed
-by language (`{"python": [...], "c": [...]}`) for multi-language questions.
+**Name the exact files.** Paths are relative to the candidate's workspace, so
+`["design.md"]` is the workspace root and `["docs/architecture.md"]` is a
+subfolder. `files` also accepts several files, or a dict keyed by language
+(`{"python": [...], "c": [...]}`) for multi-language questions.
+
 Files are read as **text**, so markdown, mermaid, PlantUML, YAML and SQL all
-work — a question can require a `DESIGN.md` and grade the reasoning in it. A
-PNG or draw.io export cannot be graded; it arrives as mangled bytes.
+work — a question can require a `design.md` and grade the reasoning in it. A
+PNG or draw.io export cannot be graded; it arrives as mangled bytes. If the
+question wants a diagram assessed, the brief must ask for it in text.
+
+A named file that does not exist fails the case with "File(s) not found". That
+is usually right — they were told to write it — but **the brief must state the
+exact filename** the case checks.
+
+**Give the model a reference to check against.** "Is this design good?" invites
+an opinion; a list of expected points asks for coverage, which is what you can
+actually defend to a candidate:
+
+```python
+def test_case_8(self, override=2):
+    reference = """A complete answer addresses:
+    1. Where validation lives - dispatcher or wrapper - and why
+    2. Retry policy, including a bound
+    3. Behaviour on an unknown tool"""
+    return ("Design covers the required decisions",
+            [["design.md"],
+             f"{reference}\n\nDoes the document address each point?"])
+```
+
+Reviewing the document **with** the code is stronger again — it catches the
+candidate who describes one design and builds another:
+`[["design.md", "agent.py"], "Does the implementation do what the document claims?"]`
 
 **Only override 1 is checked by `codepraxis validate` locally.** The other
 three need the runner, so they are reported as unverifiable and the run comes
