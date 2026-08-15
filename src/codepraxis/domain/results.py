@@ -42,6 +42,13 @@ class Fixture(enum.Enum):
     STARTER = "starter"
     #: ``source/`` overlaid with ``solution/`` — expected to PASS.
     SOLUTION = "solution"
+    #: ``source/`` overlaid with ``.attempt/`` — someone's try at the question,
+    #: used to measure how far a model gets from the brief alone.
+    #:
+    #: Deliberately has no expectation. STARTER failing and SOLUTION passing are
+    #: correctness checks; this is a measurement, and any score it produces is
+    #: information rather than a verdict.
+    ATTEMPT = "attempt"
 
 
 @dataclass(frozen=True)

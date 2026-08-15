@@ -15,6 +15,7 @@ from ..domain.results import CaseStatus, Fixture, FixtureRun, RunResult, Severit
 _FIXTURE_LABEL = {
     Fixture.STARTER: "starter",
     Fixture.SOLUTION: "solution",
+    Fixture.ATTEMPT: "attempt",
 }
 
 _STATUS_MARK = {
@@ -82,9 +83,17 @@ class HumanReporter:
         total = len(run.cases)
         passed = run.passed_count
 
-        expectation_met = not run.all_passed if run.fixture is Fixture.STARTER else run.all_passed
-        headline = f"{label:<9} {passed}/{total} passed"
-        self._line("  " + (style.good(headline) if expectation_met else style.bad(headline)))
+        if run.fixture is Fixture.ATTEMPT:
+            # A measurement, not a check. Colouring a partial score red would
+            # read as "the pack is broken" when it means "a model got this far",
+            # which is the number the author actually wants to see.
+            self._line("  " + style.dim(f"{label:<9} {passed}/{total} passed"))
+        else:
+            expectation_met = (
+                not run.all_passed if run.fixture is Fixture.STARTER else run.all_passed
+            )
+            headline = f"{label:<9} {passed}/{total} passed"
+            self._line("  " + (style.good(headline) if expectation_met else style.bad(headline)))
 
         for case in run.cases:
             failed = case.status is not CaseStatus.PASS
@@ -132,6 +141,27 @@ class HumanReporter:
                 self._line(style.bad("  FAILED") + f" {len(result.errors)} problem(s) must be fixed")
             else:
                 self._line(style.good("  OK") + style.dim("  no problems found"))
+            return
+
+        # An attempt-only run is a measurement. "PASSED" would be meaningless
+        # and "FAILED" actively misleading — a model getting nowhere is the
+        # result the author is hoping for.
+        attempt = result.run_for(Fixture.ATTEMPT)
+        if attempt is not None and len(result.runs) == 1:
+            total = len(attempt.cases)
+            passed = attempt.passed_count
+            self._line(
+                style.warn("  MEASURED")
+                + f" the attempt passed {passed}/{total} cases"
+            )
+            if total:
+                self._line(
+                    style.dim(
+                        "  Fewer is better here: it means the question is not "
+                        "answerable from the brief alone."
+                    )
+                )
+            self._line(style.dim(f"  {seconds:.1f}s"))
             return
 
         starter = result.run_for(Fixture.STARTER)

@@ -242,3 +242,68 @@ class TestOverrideModes:
             llm_configured=True,
         )
         assert status is CaseStatus.UNVERIFIABLE
+
+
+class TestAttemptFixture:
+    """ATTEMPT measures how far someone got; it is not a correctness check.
+
+    STARTER must fail and SOLUTION must pass — those prove the pack is sound.
+    An attempt scoring 1/7 is a *good* result: it means the question cannot be
+    answered from the brief alone. So it must never colour the verdict.
+    """
+
+    @staticmethod
+    def _run(fixture, passed, total):
+        from codepraxis.domain.results import CaseResult, CaseStatus, FixtureRun
+
+        cases = [
+            CaseResult(
+                name=f"test_case_{n}",
+                status=CaseStatus.PASS if n <= passed else CaseStatus.FAIL,
+            )
+            for n in range(1, total + 1)
+        ]
+        return FixtureRun(fixture=fixture, cases=tuple(cases))
+
+    def test_a_partial_attempt_does_not_make_the_pack_unsound(self):
+        result = RunResult(
+            pack_name="demo",
+            executor="local",
+            runs=(
+                self._run(Fixture.SOLUTION, 2, 2),
+                self._run(Fixture.STARTER, 0, 2),
+                self._run(Fixture.ATTEMPT, 1, 2),
+            ),
+        )
+        assert result.ok
+
+    def test_an_attempt_passing_everything_still_does_not_fail_the_pack(self):
+        """It means the question is weak, which evaluate reports — but the
+        pack itself is still mechanically sound, and validate says so."""
+        result = RunResult(
+            pack_name="demo",
+            executor="local",
+            runs=(
+                self._run(Fixture.SOLUTION, 2, 2),
+                self._run(Fixture.STARTER, 0, 2),
+                self._run(Fixture.ATTEMPT, 2, 2),
+            ),
+        )
+        assert result.ok
+
+    def test_attempt_only_runs_report_a_measurement(self):
+        from codepraxis.reporting.human import HumanReporter
+
+        buffer = io.StringIO()
+        HumanReporter(stream=buffer).report(
+            RunResult(
+                pack_name="demo",
+                executor="local",
+                runs=(self._run(Fixture.ATTEMPT, 1, 3),),
+            )
+        )
+        output = buffer.getvalue()
+        assert "MEASURED" in output
+        assert "1/3" in output
+        assert "PASSED" not in output
+        assert "FAILED" not in output

@@ -18,6 +18,7 @@ from .toc import resolve_active_index
 #: Sibling of the pack directory, never inside it — keeping the reference
 #: solution out of the pack is what stops it being uploaded to candidates.
 SOLUTION_DIR_NAME = "solution"
+ATTEMPT_DIR_NAME = ".attempt"
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -46,6 +47,17 @@ def find_solution_dir(pack_dir: Path) -> Path | None:
       ``<pack_dir>/../solution``  — CLI layout, and the question-bank CI layout
     """
     candidate = pack_dir.parent / SOLUTION_DIR_NAME
+    return candidate if candidate.is_dir() else None
+
+
+def find_attempt_dir(pack_dir: Path) -> Path | None:
+    """Locate an attempt beside the pack.
+
+    Sibling of the pack like ``solution/``, and dot-prefixed because it is
+    scratch: written by whoever is measuring the question, never committed,
+    never uploaded.
+    """
+    candidate = pack_dir.parent / ATTEMPT_DIR_NAME
     return candidate if candidate.is_dir() else None
 
 
@@ -88,4 +100,5 @@ def load_pack(pack_dir: Path) -> Pack:
         metadata=metadata,
         active_test_index=active_index,
         solution_dir=find_solution_dir(pack_dir),
+        attempt_dir=find_attempt_dir(pack_dir),
     )

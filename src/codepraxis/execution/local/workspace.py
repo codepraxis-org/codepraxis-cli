@@ -7,7 +7,9 @@ The runner does this with rsync into ``/home/praxis/{foldername}``:
 Note the trailing slash — ``source/``'s *contents* land in the workspace, not a
 nested ``source`` directory. For the SOLUTION fixture, ``solution/`` is then
 overlaid preserving relative paths, matching how the question-bank validator
-untars the reference solution over the workspace.
+untars the reference solution over the workspace. ATTEMPT works identically,
+overlaying ``.attempt/`` instead — which is what lets an attempt be measured
+against the question's real tests rather than judged by eye.
 """
 
 from __future__ import annotations
@@ -62,12 +64,24 @@ def materialize(pack: Pack, fixture: Fixture) -> Iterator[Path]:
             "A reference solution is required before a pack can be published."
         )
 
+    if fixture is Fixture.ATTEMPT and not pack.has_attempt:
+        raise HarnessError(
+            "This pack has no .attempt/ directory, so the ATTEMPT fixture cannot be built. "
+            "An attempt is written by whoever is measuring the question — it holds "
+            "someone's try at it, overlaid on source/ the way solution/ is."
+        )
+
+    overlay = {
+        Fixture.SOLUTION: pack.solution_dir,
+        Fixture.ATTEMPT: pack.attempt_dir,
+    }.get(fixture)
+
     home = Path(tempfile.mkdtemp(prefix="praxis-ws-"))
     workspace = home / pack.name
     try:
         shutil.copytree(pack.source_dir, workspace, ignore=_ignore)
-        if fixture is Fixture.SOLUTION:
-            _overlay(pack.solution_dir, workspace)
+        if overlay is not None:
+            _overlay(overlay, workspace)
         yield workspace
     finally:
         shutil.rmtree(home, ignore_errors=True)

@@ -50,6 +50,10 @@ class Pack:
     #: Reference solution overlaid for the SOLUTION fixture. Sibling of ``root``
     #: so it is never included in the uploaded zip.
     solution_dir: Path | None = None
+    #: Someone's attempt at the question, overlaid for the ATTEMPT fixture.
+    #: Sibling of ``root`` like ``solution/``, so it never reaches the uploaded
+    #: zip and never reaches a candidate.
+    attempt_dir: Path | None = None
 
     @property
     def tests_dir(self) -> Path:
@@ -70,6 +74,10 @@ class Pack:
     @property
     def has_solution(self) -> bool:
         return self.solution_dir is not None and self.solution_dir.is_dir()
+
+    @property
+    def has_attempt(self) -> bool:
+        return self.attempt_dir is not None and self.attempt_dir.is_dir()
 
     def container_workspace(self) -> str:
         """Where the runner would mount this pack's workspace.

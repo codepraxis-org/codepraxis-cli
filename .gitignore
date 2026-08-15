@@ -9,3 +9,6 @@ venv/
 .ruff_cache/
 .DS_Store
 problem.txt
+
+# Scratch: someone's attempt at a question, used to measure it. Never shipped.
+.attempt/
