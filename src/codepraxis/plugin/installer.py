@@ -113,17 +113,31 @@ def describe(result: InstallResult) -> str:
     # every machine.
     source = f"./{relative.as_posix()}" if not relative.is_absolute() else relative.as_posix()
 
+    # The recommendation comes first. Leading with the local instructions and
+    # only then saying "most people do not need this" reads as two competing
+    # options — and the reader has usually already run the wrong one.
     return "\n".join(
         [
-            f"Installed the local plugin into {relative}",
+            f"Installed a local copy of the plugin into {relative}",
             f"  {len(result.files)} files",
             "",
-            "Enable it in Claude Code:",
+            "You probably want the hosted plugin instead. It is the same",
+            "plugin, works on every machine, and updates itself:",
+            "",
+            f"  /plugin marketplace add {HOSTED_MARKETPLACE}",
+            f"  /plugin install {PLUGIN_NAME}@{HOSTED_NAME}",
+            "",
+            "Use this local copy only if you are offline, or editing the",
+            "prompts yourself. It stays frozen at the version your installed",
+            "CLI shipped with:",
             "",
             f"  /plugin marketplace add {source}",
             f"  /plugin install {PLUGIN_NAME}@{LOCAL_NAME}",
             "",
-            "Then:",
+            "Add one or the other, not both — two marketplaces each offering",
+            "a plugin named codepraxis gives you duplicate commands.",
+            "",
+            "Either way you get:",
             "",
             "  /codepraxis:plan      design a question, no code yet",
             "  /codepraxis:build     write it, test it, fix it",
@@ -132,11 +146,5 @@ def describe(result: InstallResult) -> str:
             "  /codepraxis:try       open it as a candidate would",
             "  /codepraxis:evaluate  is it any good, and can a model beat it",
             "  /codepraxis:edit      change an existing one",
-            "",
-            "Most people do not need this. The hosted plugin works the same on",
-            "every machine and updates itself:",
-            "",
-            f"  /plugin marketplace add {HOSTED_MARKETPLACE}",
-            f"  /plugin install {PLUGIN_NAME}@{HOSTED_NAME}",
         ]
     )
