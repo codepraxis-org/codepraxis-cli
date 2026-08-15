@@ -1,130 +1,190 @@
 ---
-description: Design a CodePraxis question — talk it through, then write the plan
-argument-hint: "<what you want to test, a doc, or a repo>"
-allowed-tools: Read, Glob, Grep, WebFetch, Write, Bash(codepraxis:*)
+description: Design a CodePraxis question — talk it through, find real code, write the plan
+argument-hint: "<what you want to test, or a repo>"
+allowed-tools: Read, Glob, Grep, WebFetch, Write, Task, Bash(codepraxis:*), Bash(git clone:*)
 ---
 
 Design a question for: **$ARGUMENTS**
 
-**You are not building anything in this command.** No scaffolding, no pack, no
-tests, no source files. The only file you may create is `spec.md`. Building
-happens later, in a separate command, after a human approves what you write
-here.
+**You are not building anything here.** No pack, no tests, no source files. The
+only file you may write is `spec.md`. Building happens later, in a separate
+command, after a human approves what you write.
 
-## Phase 1 — talk, then sketch
+The `question-design` skill covers what makes a question worth asking. Read it
+rather than re-deriving it. This file is the procedure.
 
-Establish three things early, because everything else depends on them:
+## Step 1 — Talk first
 
-1. **How long is the assessment?** Sixty minutes and three hours are different
-   questions, not the same question with a different timer.
-2. **What stack?** Any stack is fine — `setup.sh` runs on every container load,
-   so anything installable is allowed. You need to know so you can budget the
-   install and pin versions.
-3. **Where is this coming from?** A fresh idea, a question they already have in
-   another format, or a repository to mine.
+Nothing can be searched until you know what to search for. The answers here
+*become* the search query.
 
-Then keep asking until you actually understand the question. For some subjects
-that is three more questions, for others ten. There is no fixed list.
+Establish:
 
-**Most people cannot specify, but everyone can react.** If the answer is vague
-— "test if they know Python" — do not interrogate them. Propose two or three
-concrete questions from their domain and let them shoot the ideas down. The
-other move that works: ask about people, not skills. *"Your best engineer, and
-a hire that did not work out — what did the good one do that the other didn't?"*
-That produces a real signal statement. *"What should we test?"* never does.
+- **The role and the stack.** "AI engineer, Python, LangChain" is a search.
+  "Someone good" is not.
+- **What good looks like.** Ask about people, not skills: *"Your best engineer,
+  and a hire that didn't work out — what did the good one do that the other
+  didn't?"* That produces a real signal statement. *"What should we test?"*
+  never does.
+- **How long the assessment runs**, and roughly where that time goes. Just ask.
+  Do not derive it — they know their own process.
+- **Do they have a repository?**
 
-**You are done asking when you can write down three things:** the signal in one
-falsifiable sentence, the exact invocation and output contract, and at least
-three cases that fail for different reasons. Stop there. Everything else you
-propose rather than ask.
+If they are vague, do not interrogate. Propose two or three concrete
+directions from their domain and let them reject the wrong ones. Most people
+cannot specify, but everyone can react.
 
-Then post a **short sketch in chat** — a few sentences: the scenario, what the
-candidate does, how it is graded, roughly how hard. Cheap to throw away. Wait
-for them to react before writing anything to disk.
+## Step 2 — Get real code
 
-## Phase 2 — the two checks
+**A question built on a real repository is hard to game**, because the model
+has never seen that code. Push for this.
 
-Once the sketch is agreed, run these yourself and report what you find.
+**They have one** — best case. Before anything else, show the exact file list
+that would leave their company. The code goes into a container the candidate
+controls; that is the only irreversible step in this flow. Strip credentials,
+`.env` files, internal hostnames and customer data, and get confirmation.
 
-**Does it fit the time?** Write out where the candidate's time goes — reading,
-orienting, writing, debugging, buffer. If the slices do not sum to the
-duration, shrink the scope and say so.
+**They don't** — find one:
 
-**Can a model just solve it?** Candidates have an AI agent and an LLM endpoint
-inside the container. Take the brief you have drafted, attempt it cold as if you
-were the candidate with nothing but that text, and judge the attempt against
-your own case table.
+```bash
+codepraxis find-repos "<topic>" --language <lang> --json
+```
 
-- **If you solve it** — say so plainly, do not write the spec, and propose a
-  specific change. Bury the fact in data the model cannot guess. Remove the
-  approach hint. Move from authoring to debugging. Then re-check.
-- **If you get part way** — that is the target. A model should accelerate the
-  candidate, not replace their judgement.
-- **If you get nowhere** — usually the brief is unclear rather than the question
-  being hard. Look again before proceeding.
+Licences are already filtered to ones we may redistribute, and results are
+sampled rather than ranked. Present two or three with a recommendation and a
+reason, not a list to wade through.
 
-What survives this, strongest first: context the model has never seen (their
-repo, their schema quirk, their log format); debugging rather than authoring;
-a decision with no single right answer; integration volume; hidden cases that
-punish the obvious approach.
+**They insist on inventing one** — allowed, but only when they ask for it
+explicitly. Never the default. Say what they are giving up: a model has seen
+every public tutorial, so an invented question starts out easier to game.
 
-Reject outright: anything with a canonical answer online, pure algorithm
-implementation, CRUD scaffolding, and any brief so complete that it *is* the
-specification.
+## Step 3 — Read it, then offer a menu
 
-Be precise about the **contract** and silent about the **approach** — that is
-how a brief stays clear without becoming one-shot-able.
+**Understand the architecture fully; read one or two candidate modules
+deeply.** Not the whole repository — that is slow and mostly wasted.
 
-## Phase 3 — write the plan
+The question you are answering: **is there a seam?** A self-contained module
+with a clear interface a candidate can work inside. If there is not, say so and
+move to the next repository rather than forcing a question out of this one.
 
-Write `challenges/<slug>/spec.md`. Nothing else. Frontmatter first:
+Then offer a short menu, each option rated:
+
+```
+A. Retry + validation on tool dispatch
+   3 design decisions · ~80 lines · hard to game (7/10)
+B. Add a second tool with routing
+   2 design decisions · ~50 lines · medium (5/10)
+C. Cache the embedding step
+   1 design decision · ~30 lines · easy to game (3/10)
+
+I'd pick A. C is a one-liner a model writes instantly.
+```
+
+Be hard on the ratings — the assessment has to survive a candidate with an
+agent. Aim for **one or two features**, not a project.
+
+Check the chosen feature against the duration from step 1. If ~80 lines and
+three design decisions do not fit, cut scope and say so.
+
+### Check it can actually be graded
+
+Confirm each thing being assessed lands in one of the runner's four modes —
+`pack-contract` has the details:
+
+- **Behaviour** → override 1, which is unrestricted Python. It can start a
+  service and call it, import their module, inspect database state, or time a
+  repeated call to prove caching. Do not limit yourself to stdin→stdout
+  shapes; real repositories are libraries and services.
+- **A fixed simple output** → override 0, but only when the string is exact.
+- **A design decision** → override 2, AI review.
+
+Also: what does setup cost on *every* container load, and do the visible cases
+finish in seconds? They are the candidate's only feedback loop.
+
+### Consider asking for a written design
+
+For senior questions, where the reasoning matters more than the diff, have the
+candidate write a short `design.md` and review it **together with their code**:
+*does the implementation do what the document claims?* That catches someone who
+describes one design and builds another, which neither file reveals alone.
+
+If you do this, the brief must name the exact filename and ask for any diagram
+in text — mermaid or ASCII. An image cannot be graded.
+
+## Step 4 — Check it before writing it
+
+Invoke the `question-evaluation` skill on the agreed design. At this stage
+there is no pack, so it reviews the shape and — via a **clean subagent that has
+not seen this conversation** — reports how far a model gets from the brief
+alone.
+
+Do not run this yourself in this context. You designed the question; you know
+every answer, so your own attempt measures nothing.
+
+Report the result briefly. If a model would walk it, fix that now: bury a fact
+it cannot guess, or move the task from authoring to debugging.
+
+## Step 5 — Write the plan
+
+Write `challenges/<slug>/spec.md`. Nothing else.
+
+**Keep it short.** A hiring manager should understand what this is and how it
+will be judged in about two minutes. Everything in it earns its place.
 
 ```markdown
 ---
-question: <slug>
+question: agent-hardening
 status: draft
-duration: 60
-stack: Python, FastAPI
+repo: github.com/owner/name @ a1b2c3d
+license: MIT
 ---
+
+# Harden a tool-calling agent
+
+## The problem
+What this repo is, in two sentences. Then what breaks, and what they
+must make survive it.
+
+## How they'll solve it
+The rough shape of the change — not the code. Roughly N lines across
+M files, and whether new dependencies are needed.
+
+## How we'll check it
+
+By running their code:
+1. An unknown tool returns an error, not a silent skip
+2. Malformed JSON triggers a retry, then fails cleanly
+
+By AI review:
+3. Whether the retry strategy is deliberate or incidental
+
+## Config
+tech_stack:       Python, OpenAI SDK
+max_time:         90
+difficulty:       7/10
+ai_solvability:   medium — a model fixed 1 of 3 bugs cold
+recommended_sku:  small
+backend:          AI / PYTHON
 ```
 
-Then, in this order:
+Two rules for that file:
 
-1. **Signal** — one falsifiable sentence. Not "Python skills".
-2. **Duration and time budget** — the slices, summing to the duration.
-3. **Stack and environment** — what `setup.sh` installs, with pinned versions,
-   and how many seconds that costs on every load.
-4. **Who it is for** — role, seniority, and what prior knowledge is assumed.
-5. **Scenario** — the real situation this mirrors, in their domain.
-6. **Starting state** — what is already built in `source/` versus what is
-   missing, and why that line.
-7. **Deliverable contract** — entry point, invocation, output format, error
-   behaviour. This is what the tests will assert.
-8. **Test cases** — one row each: visible or hidden, what it discriminates that
-   nothing else does, what a plausible-but-wrong solution does on it, and
-   roughly how long it takes to run.
-9. **AI resistance** — what you found in phase 2, and the property that defeats
-   one-shotting.
-10. **Rubric** — what "good" means beyond pass/fail, and the per-candidate
-    review cost if a human reviews anything.
+**Never write "override 2" in a spec.** The reader has not seen the runner.
+"By running their code" and "By AI review" are the only two categories they
+need; build maps each line to a mode.
 
-On test cases: there is no target count. Cases exist to separate candidates, so
-write as many distinct separations as the question needs and no more. If two
-cases fail for the same reason, one is decoration. The first few are visible to
-the candidate — `RUN` sets how many — and they are the only feedback loop while
-someone works, so they must run in seconds. Hidden cases may test more, but
-never something the brief does not state; that is a gotcha, not an assessment.
-Cases run one after another, so their runtimes add up on every submit.
+**Config maps to real platform fields**, so build and ship fill them without
+guessing. Difficulty comes from the evaluation, not from taste.
 
 ## Then stop
 
-Post a summary and tell them to read `spec.md`. Do not build. Do not offer to
-build. The next step is theirs:
+Post a summary. Point them at `spec.md` and `evaluation.md`. The next step is
+theirs:
 
 ```
 codepraxis approve <slug>     then  /codepraxis:build
 ```
 
-If they want changes, revise the spec and re-post. Do not proceed until it is
-approved — and approval means the command above has been run, not that they
-said "looks good" in chat.
+Do not build. Do not offer to build. If they want changes, revise and re-post —
+and approval means that command has been run, not that someone said "looks
+good" in chat.

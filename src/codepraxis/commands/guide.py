@@ -29,12 +29,17 @@ codepraxis — build real-world coding assessments
 
   THE STEPS
 
-    plan      talk it through, agree what to test
+    plan      talk it through, find real code, agree what to test
     approve   accept the plan — nothing is built until you do
     build     Claude writes and tests the question
-    try       open it exactly as a candidate would
     ship      publish as a draft, then go live
-    edit      change one later
+
+    Any time you like:
+
+    find-repos  find a repository worth building a question from
+    try         open it exactly as a candidate would
+    evaluate    is it any good, and can a model beat it
+    edit        change one later
 
     Run `codepraxis` any time to see where you are.
 
@@ -52,29 +57,35 @@ codepraxis — build real-world coding assessments
 
     Then you get:
 
-        /codepraxis:plan    design a question, no code yet
-        /codepraxis:build   write it, test it, fix it
-        /codepraxis:try     open it as a candidate would
-        /codepraxis:ship    publish as a draft
-        /codepraxis:edit    change an existing one
+        /codepraxis:plan      design a question, no code yet
+        /codepraxis:build     write it, test it, fix it
+        /codepraxis:ship      publish as a draft
+
+        /codepraxis:try       open it as a candidate would
+        /codepraxis:evaluate  is it good, can a model beat it
+        /codepraxis:edit      change an existing one
 
     Without the plugin the CLI still works on its own:
-    `codepraxis new`, `validate`, `ship`, `list`, `edit`.
+    `codepraxis find-repos`, `new`, `validate`, `ship`, `list`,
+    `edit`.
 
     Working offline, or editing the prompts yourself? Then
     `codepraxis install claude-plugin` writes a local copy.
 
   WHAT MAKES A GOOD QUESTION
 
-    Use real work.  A bug you actually shipped, a service you
-    actually run. Puzzles tell you who practices puzzles.
+    Start from a real repository.  A model has never seen your
+    code, so a question built on it cannot be answered from the
+    brief alone. `codepraxis find-repos` will find one if you
+    cannot share yours. Puzzles tell you who practices puzzles.
 
     Give them something to start from.  A blank file wastes
     the first fifteen minutes on setup, not thinking.
 
     Make sure AI cannot shortcut it.  Candidates have a model
-    in the container. We check this while planning and will
-    stop you if the question is one prompt away from done.
+    in the container, so we measure it rather than guess: a
+    fresh model attempts your question from the brief alone and
+    we report how far it got. Fewer cases passed is better.
 
     Sit the question yourself.  Ten minutes in `try` finds
     more problems than any amount of reviewing.

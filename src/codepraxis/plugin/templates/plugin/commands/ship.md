@@ -19,6 +19,18 @@ step is deliberate and it is not yours to decide alone.
 
 If any of these fail, stop and say which one.
 
+## Then evaluate, before publishing
+
+Run the `question-evaluation` skill — **before** the publish, not after. Once
+it is live a bad verdict is a rollback rather than a decision.
+
+If `challenges/$1/evaluation.md` already exists and the pack has not changed
+since, read it rather than re-running the simulation; it costs a container run.
+
+Report the verdict in one line. **A poor verdict does not stop the publish** —
+it is theirs to weigh. Say what is wrong, say you are publishing anyway if they
+confirm, and let them decide.
+
 ## Publish as a draft
 
 ```bash

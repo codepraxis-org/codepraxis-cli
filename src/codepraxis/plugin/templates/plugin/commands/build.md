@@ -73,10 +73,26 @@ validation cannot, and fix what you find:
 Only report to the user when it passes, or when you are genuinely stuck. Do not
 narrate each fix.
 
+## Then evaluate it
+
+Validation says it runs. It does not say the question is any good.
+
+Invoke the `question-evaluation` skill. The pack exists now, so the full review
+applies and the simulation is measurable: a **clean subagent** — not you, you
+have seen the solution — writes an attempt to `challenges/$1/.attempt/`, and
+`codepraxis validate $1 --fixture attempt` scores it against the real cases.
+
+That prints `MEASURED the attempt passed N/M cases`. Fewer is better: it means
+the question is not answerable from the brief alone. If a model passes most of
+them, say so plainly — the question needs work, whatever validation says.
+
+Write `challenges/$1/evaluation.md`, and update the spec's `difficulty` and
+`ai_solvability` from what was measured rather than what was guessed.
+
 ## When it passes
 
 Say what was built, what each case catches, and how long you expect it to take.
-Then hand over:
+Give the evaluation verdict in one line. Then hand over:
 
 ```
 /codepraxis:try $1

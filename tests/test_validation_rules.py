@@ -420,7 +420,41 @@ class TestPluginInstructions:
         commands = _plugin_dir() / "commands"
         present = {path.stem for path in commands.glob("*.md")}
 
-        assert present == {"plan", "build", "try", "ship", "edit"}
+        # plan/build/ship carry the workflow; the rest are used on demand.
+        assert present == {"plan", "build", "ship", "try", "evaluate", "edit"}
+
+    def test_planning_starts_from_real_code(self):
+        """A question built on a repository the model has never seen is the
+        thing that makes it hard to answer from the brief alone. If planning
+        stops pushing for that, every question drifts back to invented ones."""
+        plan = (_plugin_dir() / "commands" / "plan.md").read_text()
+
+        assert "find-repos" in plan
+        assert "seam" in plan
+
+    def test_the_simulation_is_never_run_by_the_author_context(self):
+        """The context that designed or built a question knows its answers, so
+        its own attempt measures nothing. Every place that triggers a
+        simulation must say so, or the number silently becomes theatre."""
+        plugin = _plugin_dir()
+        sources = [
+            plugin / "commands" / "plan.md",
+            plugin / "commands" / "build.md",
+            plugin / "commands" / "evaluate.md",
+            plugin / "skills" / "question-evaluation" / "SKILL.md",
+        ]
+        for path in sources:
+            text = path.read_text().lower()
+            assert "subagent" in text, f"{path.name} must dispatch a subagent"
+
+    def test_specs_never_leak_runner_vocabulary(self):
+        """spec.md is read by a hiring manager who has never seen the runner.
+        'override 2' means nothing to them."""
+        plan = (_plugin_dir() / "commands" / "plan.md").read_text()
+
+        spec_template = plan.split("```markdown")[1].split("```")[0]
+        assert "override" not in spec_template.lower()
+        assert "By AI review" in spec_template
 
     def test_the_repository_marketplace_points_at_a_real_plugin(self):
         """The hosted marketplace is served from the repo root.

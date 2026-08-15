@@ -1,7 +1,7 @@
 {
   "name": "codepraxis",
-  "description": "Design, build, try and ship CodePraxis questions: plan first, build only from an approved plan, and check the question before candidates see it.",
-  "version": "0.3.0",
+  "description": "Design, build and ship CodePraxis questions: start from real code, plan before building, and measure whether a model can answer the question before a candidate ever sees it.",
+  "version": "0.4.0",
   "author": {
     "name": "CodePraxis"
   }
