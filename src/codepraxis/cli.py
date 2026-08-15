@@ -23,6 +23,7 @@ from . import __version__
 from .commands import approve as approve_command
 from .commands import catalog as catalog_command
 from .commands import example as example_command
+from .commands import find_repos as find_repos_command
 from .commands import guide as guide_command
 from .commands import lint as lint_command
 from .commands import login as login_command
@@ -67,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     _add_guide(subparsers)
     _add_login(subparsers)
+    _add_find_repos(subparsers)
     _add_new(subparsers)
     _add_approve(subparsers)
     _add_lint(subparsers)
@@ -101,6 +103,48 @@ def _add_login(subparsers) -> None:
         help="Store an API key and show which company it publishes as.",
     )
     cmd.set_defaults(handler=lambda args: login_command.run())
+
+
+def _add_find_repos(subparsers) -> None:
+    cmd = subparsers.add_parser(
+        "find-repos",
+        help="Find a real repository to build a question from.",
+        description=(
+            "Searches GitHub for repositories a question can be built on. A question "
+            "built on real code resists being answered from the brief alone, because "
+            "the model has never seen that code. Results are filtered to licences we "
+            "may redistribute, and sampled rather than ranked so two authors "
+            "searching the same words do not land on the same repository."
+        ),
+    )
+    cmd.add_argument("topic", help='What to test, e.g. "tool calling agent".')
+    cmd.add_argument("--language", help="Restrict to one language, e.g. python.")
+    cmd.add_argument("--limit", type=int, default=5, help="How many to show (default: 5).")
+    cmd.add_argument(
+        "--seed",
+        type=int,
+        help="Reproduce a previous run. Without it, results are sampled fresh each time.",
+    )
+    cmd.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="Where existing questions live, to skip repos already used (default: ./challenges).",
+    )
+    cmd.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    cmd.set_defaults(handler=_handle_find_repos)
+
+
+def _handle_find_repos(args: argparse.Namespace) -> int:
+    root = args.root if args.root is not None else Path.cwd() / "challenges"
+    return find_repos_command.find_repos(
+        topic=args.topic,
+        language=args.language,
+        limit=args.limit,
+        seed=args.seed,
+        root=root,
+        as_json=args.json,
+    )
 
 
 def _add_new(subparsers) -> None:
