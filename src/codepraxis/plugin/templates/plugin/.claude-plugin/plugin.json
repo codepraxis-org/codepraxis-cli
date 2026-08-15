@@ -1,7 +1,7 @@
 {
   "name": "codepraxis",
   "description": "Design, build and ship CodePraxis questions: start from real code, plan before building, and measure whether a model can answer the question before a candidate ever sees it.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "author": {
     "name": "CodePraxis"
   }

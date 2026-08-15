@@ -85,10 +85,16 @@ The empirical half: can a model answer this from the brief alone?
 > Use a subagent. Give it the brief and `source/`, nothing else. Never the
 > spec, never `solution/`, never the conversation.
 
-Run it **once**, and wait for it. One subagent, one attempt, then report. Do not
-chain a second one to test a revised framing in the same pass — that is another
-several minutes with nobody told why, and the revision can be measured on the
-next build instead.
+It costs minutes, so spend them deliberately:
+
+- **Say it is starting**, and roughly how long. A background agent with no
+  explanation cannot be told apart from a hang.
+- **Reuse an existing `evaluation.md`** when the pack has not meaningfully
+  changed. Re-measuring an unchanged question learns nothing.
+- **Run it once and wait.** Do not chain a second attempt at a revised framing
+  in the same pass; measure the revision next time.
+- **Let them decline**, and if they do, record it as not measured rather than
+  leaving `difficulty` looking like evidence when it is a guess.
 
 **After build** it is measurable:
 

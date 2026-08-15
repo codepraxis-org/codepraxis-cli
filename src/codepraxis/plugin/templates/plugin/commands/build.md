@@ -82,10 +82,27 @@ applies and the simulation is measurable: a **clean subagent** — not you, you
 have seen the solution — writes an attempt to `challenges/$1/.attempt/`, and
 `codepraxis validate $1 --fixture attempt` scores it against the real cases.
 
-Tell them it is running and roughly how long, before it starts. It takes
-minutes, and a background agent with no explanation is indistinguishable from a
-hang. Run it once and wait; do not chain a second attempt at a revised framing
-in the same pass.
+The review costs nothing — always do it. The simulation costs minutes, so:
+
+**Don't repeat it.** If `challenges/$1/evaluation.md` already exists and the
+pack has not meaningfully changed since — a typo in the brief does not count —
+reuse that number and say you are reusing it. Rebuilds are common; re-measuring
+an unchanged question just spends someone's afternoon confirming what is
+already written down.
+
+**Announce it, then let them decline.** One line before it starts: what it is
+doing, roughly how long, and that they can skip it. Something like *"Running
+the AI-resistance check — a fresh model attempts this cold, takes a few
+minutes. Say skip if you'd rather not."*
+
+Default to running it. If they skip, say plainly what that costs: `difficulty`
+stays an estimate, and nobody knows whether the question survives a candidate
+with an agent until someone checks. Note it in `evaluation.md` as not measured
+rather than leaving the field looking authoritative.
+
+Run it once and wait. Do not chain a second attempt at a revised framing in the
+same pass — that is another several minutes, and the revision can be measured
+on the next build.
 
 That prints `MEASURED the attempt passed N/M cases`. Fewer is better: it means
 the question is not answerable from the brief alone. If a model passes most of
