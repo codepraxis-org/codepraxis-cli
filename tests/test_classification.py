@@ -188,3 +188,57 @@ class TestStaticOnlyVerdict:
         from codepraxis.domain.results import Diagnostic, Severity
 
         assert "OK" in self._render([Diagnostic(Severity.WARNING, "x.y", "cosmetic")])
+
+
+class TestOverrideModes:
+    """koro has four modes; this tier can only judge override 1.
+
+    Applying override-1 rules to the others reads `self.msg`, finds it unset,
+    and reports a confident FAIL for a case that may be perfectly correct —
+    exactly the "chasing a bug that does not exist" problem above.
+    """
+
+    @staticmethod
+    def _entry(override):
+        return {"name": "test_case_1", "func": lambda: None, "timeout_window": None, "override": override}
+
+    def test_override_1_is_executed(self):
+        from codepraxis.execution.local.worker import _run_case
+
+        class Instance:
+            msg = ""
+
+        instance = Instance()
+
+        def passing_case():
+            # _run_case clears msg before running, so the case must set it.
+            instance.msg = "PASS"
+            return "expected", "output"
+
+        entry = self._entry(1)
+        entry["func"] = passing_case
+        assert _run_case(instance, entry, 1000)["status"] == "pass"
+
+    def test_other_modes_are_unverifiable_not_failed(self):
+        from codepraxis.execution.local.worker import _run_case
+
+        for override in (0, 2, None):
+            result = _run_case(object(), self._entry(override), 1000)
+            assert result["status"] == "unverifiable", override
+            assert "--remote" in result["output"], override
+
+    def test_default_mode_names_itself_clearly(self):
+        """`override=None` means no override parameter, not "override None"."""
+        from codepraxis.execution.local.worker import _run_case
+
+        result = _run_case(object(), self._entry(None), 1000)
+        assert "default" in result["output"]
+
+    def test_unverifiable_survives_classification(self):
+        adapter = backends.adapter_for("AI")
+        status = LocalExecutor._classify(
+            case("unverifiable", "override 0 is judged by the runner"),
+            adapter,
+            llm_configured=True,
+        )
+        assert status is CaseStatus.UNVERIFIABLE

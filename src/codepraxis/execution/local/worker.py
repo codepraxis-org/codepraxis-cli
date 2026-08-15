@@ -93,8 +93,46 @@ def _discover(instance):
     return methods
 
 
+#: koro has four modes and this tier can only judge one of them.
+#:
+#: - ``1``  the case decides its own verdict via ``self.msg``, in-process —
+#:          reproducible here.
+#: - ``0``  koro runs the candidate's executable and compares to the expected
+#:          output the case returns.
+#: - ``None`` (no ``override`` parameter) koro runs the *reference* executable
+#:          as well and compares the two.
+#: - ``2``  koro sends named files to an LLM for a verdict.
+#:
+#: The last three need the runner image, so applying override-1 rules to them
+#: reads ``self.msg``, finds it unset, and reports a confident FAIL for a case
+#: that may be perfectly correct.
+LOCALLY_VERIFIABLE_OVERRIDE = 1
+
+
+def _unsupported_override(entry, override):
+    described = "default (no override parameter)" if override is None else f"override {override}"
+    return {
+        "name": entry["name"],
+        "status": "unverifiable",
+        "expected": "N/A",
+        "output": (
+            f"{described} is judged by the runner, not locally. "
+            "Run `codepraxis validate --remote` to check this case."
+        ),
+        "duration_ms": 0.0,
+    }
+
+
 def _run_case(instance, entry, default_timeout_ms):
-    """Execute one case with koro's override-1 semantics."""
+    """Execute one case with koro's override-1 semantics.
+
+    Cases using any other mode are reported unverifiable rather than run, so a
+    local red is always a real problem with the pack.
+    """
+    override = entry["override"]
+    if override != LOCALLY_VERIFIABLE_OVERRIDE:
+        return _unsupported_override(entry, override)
+
     timeout_ms = entry["timeout_window"] or default_timeout_ms or 0
     timeout_secs = float(timeout_ms) / 1000.0
 

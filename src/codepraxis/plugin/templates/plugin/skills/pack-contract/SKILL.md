@@ -72,7 +72,8 @@ Non-negotiables, each of which breaks the runner:
 
 - **One constructor argument.** A two-arg `__init__` fails with
   `missing 1 required positional argument`.
-- **`self.msg == "PASS"`** decides the verdict. The return value never does.
+- **`self.msg == "PASS"`** decides the verdict **in override 1**. The return
+  value never does. Other modes ignore `self.msg` entirely — see below.
 - **No zero-padded names.** Ordering uses the first run of digits in the method
   name, so `test_case_01` and `test_case_1` collide. Use `test_case_1`,
   `test_case_2`.
@@ -86,6 +87,59 @@ Non-negotiables, each of which breaks the runner:
 
 The returned tuple is `(expected, output)`. Write both for a candidate to read —
 "Empty list, then add one note" beats "Case 1 input".
+
+## Four ways to judge a case
+
+The `override` parameter picks who decides. Get this wrong and the case is
+judged by rules you did not intend.
+
+| `override` | Who decides | Return | Use when |
+|---|---|---|---|
+| **1** | Your code, via `self.msg` | `(panel_text, success_message)` | Anything non-trivial. The default choice |
+| **0** | Runner compares to your expected output | `(input, expected_output)` | Output is a fixed, simple string |
+| *omitted* | Runner compares your reference exe against theirs | `input` | A reference solution defines correctness |
+| **2** | An LLM reads files you name | `(panel_message, [files, criteria])` | Judging design, structure or a written document |
+
+**Override 1 is the workhorse and it is unrestricted Python.** The test module
+is imported normally, so a case can start a server and make HTTP requests,
+import the candidate's module and call it, inspect database state, or time a
+repeated call to prove caching. Anything runnable is testable. Reach for this
+whenever the answer is not a single fixed string.
+
+```python
+def test_case_1(self, timeout_window=15000, override=1):
+    import sys; sys.path.insert(0, self.userWxpace)
+    from agent import dispatch
+    self.msg = "PASS" if dispatch("{bad json") is None else "Should return None"
+    return "Malformed JSON handled", "Handled gracefully"
+```
+
+**Override 0 compares with `==` after a strip.** `"7.0"` fails against `"7"`,
+and so does a differently ordered JSON object. It is the least code and the
+most brittle — use it only for output you control exactly, and use override 1
+for anything numeric or structured.
+
+**Override 2 never runs the code.** It reads the files and judges what it
+reads, so it cannot tell you whether something works — only whether it looks
+right. That makes it the wrong tool for correctness and the right one for the
+design decisions a question is really testing:
+
+```python
+def test_case_7(self, override=2):
+    return ("Retry strategy is deliberate",
+            [["agent.py"], "Is the retry a considered choice, or incidental?"])
+```
+
+`files` accepts several files, a single file (`["agent.py"]`), or a dict keyed
+by language (`{"python": [...], "c": [...]}`) for multi-language questions.
+Files are read as **text**, so markdown, mermaid, PlantUML, YAML and SQL all
+work — a question can require a `DESIGN.md` and grade the reasoning in it. A
+PNG or draw.io export cannot be graded; it arrives as mangled bytes.
+
+**Only override 1 is checked by `codepraxis validate` locally.** The other
+three need the runner, so they are reported as unverifiable and the run comes
+back inconclusive. Use `--remote` to judge them — which publishing requires
+anyway.
 
 ## Cases run one at a time
 

@@ -35,6 +35,8 @@ _STATUS_MAP = {
     "fail": CaseStatus.FAIL,
     "timeout": CaseStatus.TIMEOUT,
     "error": CaseStatus.ERROR,
+    # The worker reports this for koro modes only the runner can judge.
+    "unverifiable": CaseStatus.UNVERIFIABLE,
 }
 
 
@@ -174,8 +176,9 @@ class LocalExecutor:
                     severity=Severity.UNVERIFIABLE,
                     code="local.missing-infrastructure",
                     message=(
-                        "Some cases need infrastructure this machine does not have "
-                        "(typically the LLM proxy). They are reported as unverifiable "
+                        "Some cases need the runner rather than this machine — an LLM "
+                        "endpoint, or a koro mode only the runner implements (default, "
+                        "override 0, override 2). They are reported as unverifiable "
                         "rather than failed — run `codepraxis validate --remote` to judge them."
                     ),
                 )
