@@ -17,12 +17,22 @@ rule for the simulation, and the report format.
 
 Look at what exists before deciding what to check:
 
-- **`spec.md` only** — review the design. The simulation can attempt the draft
-  brief, but there is nothing to run it against yet.
+- **`spec.md` only** — review the design and stop. There is no pack to run an
+  attempt against, so the simulation would be a guess about a brief. Say that
+  rather than dressing up an estimate as a measurement.
 - **A built pack** — the full review, plus a measured simulation via
   `codepraxis validate $1 --fixture attempt`.
 
 Do not report on checks you could not perform. Say what you skipped and why.
+
+## Say how long it will take, before it takes it
+
+The simulation runs a subagent and takes minutes. Before starting it, say so in
+one line — what it is doing and roughly how long. Someone watching a background
+agent tick with no explanation cannot tell progress from a hang.
+
+Run it once and wait for the result. Do not queue a second attempt to test a
+revised framing in the same pass.
 
 ## The simulation must not be run by you
 

@@ -22,10 +22,15 @@ Establish:
 
 - **The role and the stack.** "AI engineer, Python, LangChain" is a search.
   "Someone good" is not.
-- **What good looks like.** Ask about people, not skills: *"Your best engineer,
-  and a hire that didn't work out — what did the good one do that the other
-  didn't?"* That produces a real signal statement. *"What should we test?"*
-  never does.
+- **What good looks like** — the signal. Asking about *people* gets a real
+  answer where asking about skills gets a list: what a strong hire did that a
+  weak one couldn't. But that is a technique, not a script. Ask it in your own
+  words, once, and only if you actually need it.
+
+  **Skip it entirely when the signal is already there.** "assess embedded
+  engineers for an NPU role" plus "C, memory management, pthreads" is a signal.
+  Asking the set-piece question on top of that reads as a form to fill in, and
+  the answer you get back will just repeat what they already told you.
 - **How long the assessment runs**, and roughly where that time goes. Just ask.
   Do not derive it — they know their own process.
 - **Do they have a repository?**
@@ -51,8 +56,35 @@ codepraxis find-repos "<topic>" --language <lang> --json
 ```
 
 Licences are already filtered to ones we may redistribute, and results are
-sampled rather than ranked. Present two or three with a recommendation and a
-reason, not a list to wade through.
+sampled rather than ranked.
+
+**Show them the shortlist and let them pick.** Three or four, each with enough
+to judge it on — what it is, its size, and the seam you would build on. Say
+which you would choose and why, then **stop and wait**.
+
+```
+1. Isty001/mem-pool  · MIT · ~1,060 lines C
+   Fixed/variable-size pool allocator. Free lists guarded by one
+   pthread_mutex_t. Seam: pool_fixed_alloc in src/fixed.c, ~100 lines.
+
+2. mlyszczek/librb  · BSD-3 · ~2,400 lines C
+   Thread-aware ring buffer. Single file, so less room for a feature
+   with more than one decision in it.
+
+3. johnosullivan/esp32-iridium-modem  · MIT · ~5,900 lines C
+   Genuinely embedded firmware, but the seam is buried in AT-command
+   parsing rather than concurrency.
+
+I'd pick 1 — the locking is real rather than decorative. Which do you
+want?
+```
+
+Do not pick for them and move on. The repository decides what the question can
+possibly be about, and they know their hiring bar; presenting a choice as
+already-made is the fastest way to build the wrong question convincingly.
+
+If a search comes back thin, say so and search again with different words
+rather than settling for the best of a bad set.
 
 **They insist on inventing one** — allowed, but only when they ask for it
 explicitly. Never the default. Say what they are giving up: a model has seen
@@ -111,18 +143,27 @@ describes one design and builds another, which neither file reveals alone.
 If you do this, the brief must name the exact filename and ask for any diagram
 in text — mermaid or ASCII. An image cannot be graded.
 
-## Step 4 — Check it before writing it
+## Step 4 — Sanity-check it yourself, in seconds
 
-Invoke the `question-evaluation` skill on the agreed design. At this stage
-there is no pack, so it reviews the shape and — via a **clean subagent that has
-not seen this conversation** — reports how far a model gets from the brief
-alone.
+Planning is a conversation and must stay at conversation speed.
 
-Do not run this yourself in this context. You designed the question; you know
-every answer, so your own attempt measures nothing.
+**Do not run the simulation here.** Do not dispatch a subagent, do not start
+background work, do not make them wait. The measurement belongs in
+`/codepraxis:build`, where a pack exists and the attempt can be scored by the
+real tests instead of guessed at — and where the author is already waiting for
+a build rather than sitting in a design discussion.
 
-Report the result briefly. If a model would walk it, fix that now: bury a fact
-it cannot guess, or move the task from authoring to debugging.
+What you can do in a few seconds, from your own reading:
+
+- Would the brief alone be enough for a model? If yes, say which property makes
+  it trivial and fix it now — bury a fact it cannot guess, or move the task from
+  authoring to debugging.
+- Do the cases separate different failures, or the same one twice?
+- Does the scope fit the duration they gave?
+
+Say what you found in a line or two. Then write the spec. Build will produce
+the real number and correct your estimate if you were wrong — that is what it
+is for.
 
 ## Step 5 — Write the plan
 

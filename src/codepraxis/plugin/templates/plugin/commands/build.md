@@ -82,6 +82,11 @@ applies and the simulation is measurable: a **clean subagent** — not you, you
 have seen the solution — writes an attempt to `challenges/$1/.attempt/`, and
 `codepraxis validate $1 --fixture attempt` scores it against the real cases.
 
+Tell them it is running and roughly how long, before it starts. It takes
+minutes, and a background agent with no explanation is indistinguishable from a
+hang. Run it once and wait; do not chain a second attempt at a revised framing
+in the same pass.
+
 That prints `MEASURED the attempt passed N/M cases`. Fewer is better: it means
 the question is not answerable from the brief alone. If a model passes most of
 them, say so plainly — the question needs work, whatever validation says.

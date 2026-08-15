@@ -434,11 +434,10 @@ class TestPluginInstructions:
 
     def test_the_simulation_is_never_run_by_the_author_context(self):
         """The context that designed or built a question knows its answers, so
-        its own attempt measures nothing. Every place that triggers a
-        simulation must say so, or the number silently becomes theatre."""
+        its own attempt measures nothing. Every place that runs a simulation
+        must dispatch a subagent, or the number silently becomes theatre."""
         plugin = _plugin_dir()
         sources = [
-            plugin / "commands" / "plan.md",
             plugin / "commands" / "build.md",
             plugin / "commands" / "evaluate.md",
             plugin / "skills" / "question-evaluation" / "SKILL.md",
@@ -446,6 +445,27 @@ class TestPluginInstructions:
         for path in sources:
             text = path.read_text().lower()
             assert "subagent" in text, f"{path.name} must dispatch a subagent"
+
+    def test_planning_never_runs_the_simulation(self):
+        """Planning is a conversation and has to stay at conversation speed.
+
+        The simulation takes minutes and there is no pack to score against yet,
+        so running it mid-discussion buys a guess in exchange for a wait. Build
+        measures it properly against the real tests.
+        """
+        plan = (_plugin_dir() / "commands" / "plan.md").read_text().lower()
+
+        assert "do not run the simulation here" in plan
+        assert "do not dispatch a subagent" in plan
+
+    def test_planning_lets_the_author_choose_the_repository(self):
+        """The repository decides what the question can be about. Presenting
+        that choice as already made is the fastest way to build the wrong
+        question convincingly."""
+        plan = (_plugin_dir() / "commands" / "plan.md").read_text().lower()
+
+        assert "let them pick" in plan
+        assert "do not pick for them" in plan
 
     def test_specs_never_leak_runner_vocabulary(self):
         """spec.md is read by a hiring manager who has never seen the runner.

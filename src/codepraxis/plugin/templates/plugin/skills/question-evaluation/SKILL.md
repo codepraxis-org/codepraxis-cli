@@ -24,7 +24,16 @@ guessing.
 |---|---|---|---|
 | Review — signal, cases, time, contract | ✅ | ✅ | ✅ |
 | Review — solution, starter, brief/files | spec only | ✅ | ✅ |
-| Simulation | offer it | ✅ | ✅ |
+| Simulation | **no** | ✅ | reuse the report |
+
+**The simulation does not run during planning.** It takes minutes, and planning
+is a conversation — making someone wait on a background agent mid-discussion is
+worse than the estimate it replaces. There is also no pack yet, so the best it
+could produce is a guess about a brief, while the same work after build is
+scored by the question's real tests.
+
+At ship, reuse `evaluation.md` if the pack has not changed since. Re-running
+costs a container run to re-learn what you already know.
 
 ## The review
 
@@ -76,10 +85,12 @@ The empirical half: can a model answer this from the brief alone?
 > Use a subagent. Give it the brief and `source/`, nothing else. Never the
 > spec, never `solution/`, never the conversation.
 
-**After plan**, there is no pack yet, so the subagent gets the draft brief and
-reports how far it could get in principle. Offer it; do not force it.
+Run it **once**, and wait for it. One subagent, one attempt, then report. Do not
+chain a second one to test a revised framing in the same pass — that is another
+several minutes with nobody told why, and the revision can be measured on the
+next build instead.
 
-**After build**, it is measurable:
+**After build** it is measurable:
 
 1. Subagent writes its attempt to `challenges/<slug>/.attempt/`
 2. `codepraxis validate <slug> --fixture attempt`
