@@ -80,6 +80,17 @@ PUBLISH_FILE = "publish.json"
 CONTAINER_USER = "praxis"
 CONTAINER_WORKSPACE_TEMPLATE = "/home/{user}/{foldername}"
 
+# --- Runner environment ----------------------------------------------------
+#: codingenv/Dockerfile — ``FROM nvidia/cuda:11.8.0-base-ubuntu22.04``, and
+#: Ubuntu 22.04's ``python3`` is 3.10.
+#:
+#: Worth stating as a constant rather than prose: authors on a newer
+#: interpreter write code that passes locally and fails on the runner, and the
+#: difference is often semantic rather than syntactic — ``Union[X, X]``
+#: collapses on 3.12+ and raises TypeError on 3.10 — so nothing static catches
+#: it. The local harness compares against this to decide how loudly to warn.
+RUNNER_PYTHON = (3, 10)
+
 # --- testCases contract ----------------------------------------------------
 #: koro/test_loader.py:87 — ``getattr(test_module, 'testCases')(question_folder)``.
 #: Exactly one argument after ``self``: the workspace path.

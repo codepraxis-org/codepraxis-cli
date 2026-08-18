@@ -73,6 +73,29 @@ validation cannot, and fix what you find:
 Only report to the user when it passes, or when you are genuinely stuck. Do not
 narrate each fix.
 
+## Then run it once on the real image
+
+```bash
+codepraxis validate $1 --remote
+```
+
+**Do this here, not at publish time.** It costs about a minute and it is the
+only thing that catches the class of bug local validation cannot see:
+
+- The runner is **Python 3.10**. Anything newer is a trap, and some of it is
+  semantic rather than syntactic — `Union[X, X]` collapses on 3.12+ and raises
+  `TypeError` on 3.10 — so neither lint nor a local run finds it.
+- `setup.sh` is not executed locally at all.
+- Three of koro's four test modes cannot be judged locally.
+- A subprocess in the container gets a different Python than your test module.
+
+Skipping it does not avoid the cost, it defers it: the first remote run then
+happens inside `ship`, which waits up to fifteen minutes and is a far worse
+place to discover a missing package.
+
+Say it is running and that it takes about a minute. A remote failure here is a
+build failure — fix it and re-run, rather than carrying it into publishing.
+
 ## Then evaluate it
 
 Validation says it runs. It does not say the question is any good.

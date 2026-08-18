@@ -89,6 +89,41 @@ class LocalExecutor:
 
     # -- internals ---------------------------------------------------------
 
+    @staticmethod
+    def _interpreter_diagnostic() -> Diagnostic:
+        """How this machine's Python differs from the runner's.
+
+        Escalates to a warning when the local interpreter is *newer*, because
+        that gap silently produces packs that pass here and fail there. The
+        difference is often semantic rather than syntactic — ``Union[X, X]``
+        collapses on 3.12+ and raises on 3.10 — so nothing static catches it,
+        and a dim note gets read as housekeeping.
+        """
+        local = (sys.version_info.major, sys.version_info.minor)
+        runner = contract.RUNNER_PYTHON
+
+        if local > runner:
+            return Diagnostic(
+                severity=Severity.WARNING,
+                code="local.interpreter-newer",
+                message=(
+                    f"You are on Python {local[0]}.{local[1]}; the runner is "
+                    f"{runner[0]}.{runner[1]}. Code that works here can fail there, and "
+                    f"local validation cannot see it. Verify with "
+                    f"`codepraxis validate --remote` before publishing."
+                ),
+            )
+
+        return Diagnostic(
+            severity=Severity.UNVERIFIABLE,
+            code="local.interpreter-mismatch",
+            message=(
+                f"Running Python {local[0]}.{local[1]} on {sys.platform}; the runner is "
+                f"Python {runner[0]}.{runner[1]} on linux/amd64. Packages resolved here "
+                f"may not exist there."
+            ),
+        )
+
     def _environment_diagnostics(self) -> list[Diagnostic]:
         """Differences between this machine and the container that change results."""
         notes = [
@@ -100,15 +135,7 @@ class LocalExecutor:
                     "import-time race against it, are only exercised by `--remote`."
                 ),
             ),
-            Diagnostic(
-                severity=Severity.UNVERIFIABLE,
-                code="local.interpreter-mismatch",
-                message=(
-                    f"Running Python {sys.version_info.major}.{sys.version_info.minor} on "
-                    f"{sys.platform}; the runner image is linux/amd64. Packages resolved here "
-                    f"may not exist there."
-                ),
-            ),
+            self._interpreter_diagnostic(),
         ]
         if self._llm_configured:
             notes.append(

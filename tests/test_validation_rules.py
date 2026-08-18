@@ -6,6 +6,7 @@ Every fixture here is synthetic — see CONTRIBUTING.md on the content boundary.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -493,3 +494,77 @@ class TestPluginInstructions:
         assert (source / ".claude-plugin" / "plugin.json").is_file()
         assert (source / "commands").is_dir()
         assert (source / "skills").is_dir()
+
+
+class TestRunnerEnvironment:
+    """The runner is Python 3.10 and has two Python environments.
+
+    Both facts are invisible locally, so a pack can be green on the author's
+    machine and fail on the image. These pin the two cheap catches.
+    """
+
+    def _pack_with_test(self, tmp_path, body: str):
+        from codepraxis.packio.loader import load_pack
+        from codepraxis.scaffold.generator import create
+
+        result = create(tmp_path / "challenges", "env_demo")
+        result.pack_dir.joinpath("._tests", "test_1.py").write_text(body, encoding="utf-8")
+        return load_pack(result.pack_dir)
+
+    def test_spawning_python_is_flagged_when_the_pack_uses_dependencies(self, tmp_path):
+        pack = self._pack_with_test(
+            tmp_path,
+            "import sys\nimport subprocess\nimport redis\n\n"
+            "class testCases:\n"
+            "    def __init__(self, w):\n        self.msg = ''\n"
+            "    def test_case_1(self, override=1):\n"
+            "        subprocess.run([sys.executable, 'main.py'])\n"
+            "        return 'a', 'b'\n",
+        )
+        codes = [d.code for d in lint(pack)]
+        assert "env.subprocess-interpreter" in codes
+
+    def test_a_stdlib_only_pack_is_left_alone(self, tmp_path):
+        """Spawning the candidate's program is the normal shape of a CLI
+        question and is what `codepraxis new` generates. Warning on it would
+        put a diagnostic on every scaffolded pack."""
+        pack = self._pack_with_test(
+            tmp_path,
+            "import sys\nimport subprocess\n\n"
+            "class testCases:\n"
+            "    def __init__(self, w):\n        self.msg = ''\n"
+            "    def test_case_1(self, override=1):\n"
+            "        subprocess.run([sys.executable, 'main.py'])\n"
+            "        return 'a', 'b'\n",
+        )
+        assert [d.code for d in lint(pack)] == []
+
+    def test_dependencies_without_spawning_are_left_alone(self, tmp_path):
+        pack = self._pack_with_test(
+            tmp_path,
+            "import redis\n\n"
+            "class testCases:\n"
+            "    def __init__(self, w):\n        self.msg = ''\n"
+            "    def test_case_1(self, override=1):\n"
+            "        return 'a', 'b'\n",
+        )
+        assert [d.code for d in lint(pack)] == []
+
+    def test_the_runner_python_version_is_stated_not_implied(self):
+        """The contract used to say only "Python 3", so authors on 3.12+ wrote
+        code that could only fail on the image."""
+        from codepraxis.domain import contract
+
+        assert contract.RUNNER_PYTHON == (3, 10)
+
+    def test_a_newer_local_interpreter_warns_rather_than_whispers(self):
+        from codepraxis.domain.results import Severity
+        from codepraxis.execution.local.executor import LocalExecutor
+
+        diagnostic = LocalExecutor._interpreter_diagnostic()
+        if sys.version_info[:2] > (3, 10):
+            assert diagnostic.severity is Severity.WARNING
+            assert "3.10" in diagnostic.message
+            assert "--remote" in diagnostic.message
+        else:
+            assert diagnostic.severity is Severity.UNVERIFIABLE

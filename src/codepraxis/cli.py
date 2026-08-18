@@ -470,7 +470,8 @@ def _build_executor(args: argparse.Namespace):
         # a missing credential file cannot break an offline run.
         from .execution.remote.executor import RemoteExecutor
 
-        return RemoteExecutor()
+        # --json output is parsed by tooling, so progress would corrupt it.
+        return RemoteExecutor(quiet=bool(getattr(args, "json", False)))
     return LocalExecutor(
         llm_base_url=getattr(args, "llm_base_url", None),
         llm_api_key=getattr(args, "llm_api_key", None),

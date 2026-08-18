@@ -192,8 +192,42 @@ finish in seconds.
 - **Editor extensions can be installed** at setup time; that is a legitimate
   part of question design.
 
-Already in the image: Python 3, Node 20, gcc, g++, make, clangd, .NET 8, the
-ARM toolchain, QEMU, Renode, git, tmux. Anything else is a `setup.sh` install.
+Already in the image: **Python 3.10**, Node 20, gcc, g++, make, clangd, .NET 8,
+the ARM toolchain, QEMU, Renode, git, tmux. Anything else is a `setup.sh`
+install.
+
+### Python is 3.10, and your machine probably is not
+
+The image is Ubuntu 22.04, so `python3` is **3.10**. Write 3.10-compatible code
+in tests and in `solution/`.
+
+**Local validation cannot catch this.** The failure only exists on the runner,
+so a pack that is green locally can still fail there. The classic example is
+semantic rather than syntactic, which is why no linter finds it:
+
+```python
+Union[Sentinel, Sentinel]   # collapses and passes on 3.12+
+                            # raises TypeError on 3.10
+```
+
+Anything newer than 3.10 is a trap: `X | Y` unions at runtime, `match`,
+`ExceptionGroup`, `tomllib`, `itertools.batched`, `typing.Self`. If in doubt,
+run `codepraxis validate --remote` — it uses the real image and costs about a
+minute.
+
+### The runner has two Python environments
+
+They are not the same interpreter, and the difference is invisible until
+something fails on import:
+
+| Where | What it has |
+|---|---|
+| The interpreter that **imports your test module** | `typing_extensions`, `redis`, and whatever `setup.sh` installed |
+| A subprocess spawned via `sys.executable` | bare `/usr/lib/python3.10` — **neither** |
+
+So a case that works in-process can fail identically-written as a subprocess.
+Prefer importing the candidate's module directly over shelling out; if you must
+spawn a process, do not assume it inherits your imports.
 
 ## Workflow
 
