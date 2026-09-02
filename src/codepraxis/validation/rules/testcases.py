@@ -38,7 +38,7 @@ class ConstructorArityRule:
     """``testCases.__init__`` must take exactly one argument after ``self``.
 
     The runner calls ``testCases(workspace_path)``. A two-argument constructor
-    fails at import time with ``missing 1 required positional argument`` — a
+    fails at import time with ``missing 1 required positional argument``, a
     message that names the parameter, not the mistake. Parsing catches it before
     a container is ever allocated.
     """

@@ -24,7 +24,7 @@ CodePraxis gives candidates real engineering work instead of algorithm puzzles.
 They open a browser, land in a real editor in a real container, and fix or build
 something. Hidden tests decide whether it worked.
 
-This CLI is how you make those questions — keeping them in your own git
+This CLI is how you make those questions, keeping them in your own git
 repository, editing them with your own tools, and checking them before they
 reach anyone.
 
@@ -54,21 +54,21 @@ Run `codepraxis` at any point to see where you are and what to type next.
 /plugin install codepraxis@codepraxis
 ```
 
-The same two lines on every machine — no paths, nothing to keep in sync, and
+The same two lines on every machine, no paths, nothing to keep in sync, and
 prompt improvements arrive on the next marketplace refresh without a CLI
 upgrade. You get:
 
-- **`/codepraxis:plan`** — find real code to build on, agree what it tests,
+- **`/codepraxis:plan`** find real code to build on, agree what it tests,
   and write the plan. Stops there.
-- **`/codepraxis:build`** — write it, run it, repair what fails
-- **`/codepraxis:ship`** — publish as a draft and return the link
+- **`/codepraxis:build`** write it, run it, repair what fails
+- **`/codepraxis:ship`** publish as a draft and return the link
 
 Used whenever you want them:
 
-- **`/codepraxis:try`** — open it the way a candidate gets it
-- **`/codepraxis:evaluate`** — is the question any good, and how far does a
+- **`/codepraxis:try`** open it the way a candidate gets it
+- **`/codepraxis:evaluate`** is the question any good, and how far does a
   model get from the brief alone
-- **`/codepraxis:edit`** — change an existing question and publish a new version
+- **`/codepraxis:edit`** change an existing question and publish a new version
 
 Three skills load automatically: **pack-contract** (what the runner requires),
 **question-design** (what makes a question worth asking) and
@@ -81,7 +81,7 @@ codepraxis approve my-question
 ```
 
 That is a command rather than a "yes" in chat because the plan outlives the
-conversation — a later session, another machine, or a colleague running the
+conversation, a later session, another machine, or a colleague running the
 build has no access to what was agreed.
 
 Planning refuses to proceed on a question a model can solve from the brief
@@ -113,8 +113,8 @@ codepraxis ship my-question --challenge-id 214   # publish an edit, not a duplic
 | Command | Runs | Speed | Counts? |
 |---|---|---|---|
 | `codepraxis lint` | Static rules over the files | milliseconds | Advisory |
-| `codepraxis validate --local` | Pure-Python harness on your machine | seconds | No — advisory |
-| `codepraxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes — gates publish** |
+| `codepraxis validate --local` | Pure-Python harness on your machine | seconds | No, advisory |
+| `codepraxis validate --remote` | The real runner image, on CodePraxis | ~1 min | **Yes, gates publish** |
 
 `lint` never imports your code, so it is safe on a question you did not write
 and fast enough for every save.
@@ -129,8 +129,8 @@ always requires a remote run.
 
 Every question is validated twice:
 
-- **solution** — `source/` overlaid with `solution/`. Must pass everything.
-- **starter** — `source/` alone. Must *fail*.
+- **solution** `source/` overlaid with `solution/`. Must pass everything.
+- **starter** `source/` alone. Must *fail*.
 
 The starter run is the one authors forget. A question whose starter already
 passes has tests that do not discriminate, and every candidate scores full
@@ -138,11 +138,11 @@ marks.
 
 A third fixture is available on request:
 
-- **attempt** — `source/` overlaid with `.attempt/`, someone's try at the
+- **attempt** `source/` overlaid with `.attempt/`, someone's try at the
   question. `codepraxis validate <q> --fixture attempt`
 
 It has no expectation attached. Where solution and starter check the pack is
-sound, this measures how far a model gets from the brief alone — and passing
+sound, this measures how far a model gets from the brief alone, and passing
 *fewer* cases is the good outcome, because it means the question cannot be
 answered by reading it.
 
@@ -154,13 +154,13 @@ webhook-debug  (local)
 ```
 
 Three verdicts: **PASSED**, **FAILED**, and **INCONCLUSIVE** (this tier lacked
-the infrastructure to judge it — not a failure, and it does not fail the
+the infrastructure to judge it, not a failure, and it does not fail the
 command). `--json` always emits a single document with a `packs` array.
 
 ## Questions that call a model
 
 By default there is no model endpoint locally, so cases that need one are
-reported **unverifiable** rather than failed — a question is not broken just
+reported **unverifiable** rather than failed, a question is not broken just
 because your laptop has no LLM proxy. Point it at a real endpoint and they run
 for real:
 
@@ -177,9 +177,9 @@ failure, because it can be judged.
 
 ```
 challenges/my-question/
-├── spec.md                  the plan — what this tests and why
+├── spec.md                  the plan, what this tests and why
 ├── pack/                    what the runner mounts
-│   ├── metadata.json        {"name": "..."} — becomes the workspace directory
+│   ├── metadata.json        {"name": "..."}, becomes the workspace directory
 │   ├── backend.conf         {"BACKEND": "AI", "LANGUAGE": "PYTHON"}
 │   ├── publish.json         title, difficulty, time limit, tech stack
 │   ├── setup.sh             optional; installs dependencies
@@ -188,12 +188,12 @@ challenges/my-question/
 │   └── ._course_data/
 │       ├── course_toc.json  selects the active test module
 │       └── feature.md       the Instructions tab
-└── solution/                never uploaded — the reference solution
+└── solution/                never uploaded, the reference solution
 ```
 
 Every question gets its own directory. The reference solution is found as the
 pack's sibling, so questions sharing a parent would resolve to the same
-`solution/` — which is how one question's answer gets overwritten by another's.
+`solution/`, which is how one question's answer gets overwritten by another's.
 
 `setup.sh` runs on **every** container load, not once at build time. Pin your
 versions: an unpinned install resolves to whatever is current that day, and a
@@ -207,7 +207,7 @@ codepraxis login
 
 Prompts for an API key (hidden input), verifies it, and stores it at
 `~/.config/codepraxis/config.json` with `0600` permissions. It prints which
-company the key publishes as — worth reading, because that is what every
+company the key publishes as, worth reading, because that is what every
 publish is scoped to.
 
 In CI, skip the prompt:
@@ -233,7 +233,7 @@ to candidates immediately:
 - **A reference solution is required.** It is what proves the question is
   solvable.
 - **It publishes as a draft** unless you pass `--live`.
-- **The company comes from your API key.** The CLI never sends a company id —
+- **The company comes from your API key.** The CLI never sends a company id, 
   ownership is derived server-side, so a compromised or mistyped client cannot
   publish into someone else's catalog.
 
@@ -256,7 +256,7 @@ codepraxis delete 214
 ```
 
 Asks first, and the platform refuses once the question has been assigned to
-anyone — deleting it then would orphan attempts and reports. To take an
+anyone, deleting it then would orphan attempts and reports. To take an
 assigned question out of circulation, set it back to draft with
 `codepraxis edit 214 --status draft`.
 
@@ -275,7 +275,7 @@ ruff check src tests scripts
 ```
 
 The package has **no runtime dependencies**. The harness must run on an
-author's machine with nothing but a Python interpreter, so keep it that way —
+author's machine with nothing but a Python interpreter, so keep it that way, 
 the remote tier uses `urllib` from the standard library for the same reason.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.

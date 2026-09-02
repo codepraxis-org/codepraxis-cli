@@ -2,7 +2,7 @@
 
 **This is the fallback, not the normal path.** The plugin is served straight
 from the public repository, so almost everyone should add it as a hosted
-marketplace and never touch this command — that works identically on every
+marketplace and never touch this command. That works identically on every
 machine, needs no path, and picks up prompt changes without a CLI upgrade.
 
 Installing locally is for working offline, or for editing the prompts and
@@ -35,7 +35,7 @@ HOSTED_NAME = "codepraxis"
 
 #: The local one is named differently on purpose. Marketplace names are global
 #: in Claude Code, so sharing a name would mean a local install silently
-#: displaced the hosted one — or refused to be added at all.
+#: displaced the hosted one, or refused to be added at all.
 LOCAL_NAME = "codepraxis-local"
 
 
@@ -69,7 +69,7 @@ def _copy_tree(source, destination: Path, written: list[Path]) -> None:
 def install(project_root: Path, force: bool = False) -> InstallResult:
     """Materialise the plugin under ``project_root``.
 
-    Refuses to clobber an existing install unless ``force`` — the author may
+    Refuses to clobber an existing install unless ``force``, the author may
     have edited the commands, and silently reverting that is worse than failing.
     """
     root = (project_root / INSTALL_DIR).resolve()
@@ -115,7 +115,7 @@ def describe(result: InstallResult) -> str:
 
     # The recommendation comes first. Leading with the local instructions and
     # only then saying "most people do not need this" reads as two competing
-    # options — and the reader has usually already run the wrong one.
+    # options, and the reader has usually already run the wrong one.
     return "\n".join(
         [
             f"Installed a local copy of the plugin into {relative}",
@@ -134,7 +134,7 @@ def describe(result: InstallResult) -> str:
             f"  /plugin marketplace add {source}",
             f"  /plugin install {PLUGIN_NAME}@{LOCAL_NAME}",
             "",
-            "Add one or the other, not both — two marketplaces each offering",
+            "Add one or the other, not both, two marketplaces each offering",
             "a plugin named codepraxis gives you duplicate commands.",
             "",
             "Either way you get:",

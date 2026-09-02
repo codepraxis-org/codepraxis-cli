@@ -5,8 +5,8 @@ reporters are chosen here and injected into commands, so commands stay
 independent of how results are produced or rendered.
 
 The surface is subcommands: ``codepraxis ship``, not ``codepraxis --publish``.
-The flag forms still work — they are accepted, hidden from help, and mapped
-onto the same handlers — because scripts and CI jobs were written against them
+The flag forms still work. They are accepted, hidden from help, and mapped
+onto the same handlers, because scripts and CI jobs were written against them
 and silently breaking those is worse than carrying the aliases.
 
 A bare ``codepraxis`` prints status, not help. It is the first thing everyone
@@ -184,7 +184,7 @@ def _add_approve(subparsers) -> None:
 def _add_lint(subparsers) -> None:
     cmd = subparsers.add_parser(
         "lint",
-        help="Static checks only — no execution, no container.",
+        help="Static checks only, no execution, no container.",
         description=(
             "Reads the question and reports problems without importing or running "
             "any of its code. Fast enough for every save, and safe on a pack you "
@@ -302,7 +302,7 @@ def _add_edit(subparsers) -> None:
         "edit",
         help="Update a question's details and open it in a container.",
         description=(
-            "Changes catalog details — title, description, difficulty, limits — and "
+            "Changes catalog details, title, description, difficulty, limits, and "
             "returns a container URL. Changing the question's CODE means editing the "
             "pack and publishing a new version: `codepraxis ship <pack> --challenge-id <id>`."
         ),
@@ -365,7 +365,7 @@ def _add_example(subparsers) -> None:
         help="Open a real question in a live container. No account needed.",
         description=(
             "Starts a throwaway container with the featured question already in it "
-            "and prints a URL — exactly what a candidate sees. Nothing is recorded "
+            "and prints a URL, exactly what a candidate sees. Nothing is recorded "
             "as an attempt."
         ),
     )

@@ -3,11 +3,11 @@
 Two behaviours worth pinning down:
 
 * A case that fails only because this machine has no model endpoint is
-  *unverifiable*, not failed — reporting it as a failure sends authors chasing a
+  *unverifiable*, not failed, reporting it as a failure sends authors chasing a
   bug that does not exist off-platform.
 * Once an endpoint is configured, that leniency stops. A failure is a failure.
 
-Fixtures are synthetic — see CONTRIBUTING.md on the content boundary.
+Fixtures are synthetic, see CONTRIBUTING.md on the content boundary.
 """
 
 from __future__ import annotations
@@ -194,7 +194,7 @@ class TestOverrideModes:
     """koro has four modes; this tier can only judge override 1.
 
     Applying override-1 rules to the others reads `self.msg`, finds it unset,
-    and reports a confident FAIL for a case that may be perfectly correct —
+    and reports a confident FAIL for a case that may be perfectly correct, 
     exactly the "chasing a bug that does not exist" problem above.
     """
 
@@ -247,7 +247,7 @@ class TestOverrideModes:
 class TestAttemptFixture:
     """ATTEMPT measures how far someone got; it is not a correctness check.
 
-    STARTER must fail and SOLUTION must pass — those prove the pack is sound.
+    STARTER must fail and SOLUTION must pass. Those prove the pack is sound.
     An attempt scoring 1/7 is a *good* result: it means the question cannot be
     answered from the brief alone. So it must never colour the verdict.
     """
@@ -278,7 +278,7 @@ class TestAttemptFixture:
         assert result.ok
 
     def test_an_attempt_passing_everything_still_does_not_fail_the_pack(self):
-        """It means the question is weak, which evaluate reports — but the
+        """It means the question is weak, which evaluate reports, but the
         pack itself is still mechanically sound, and validate says so."""
         result = RunResult(
             pack_name="demo",

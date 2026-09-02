@@ -5,7 +5,7 @@ The local harness can reproduce some of that and not the rest; each adapter
 states which, so an unsupported pack produces an honest diagnostic instead of a
 wall of spurious failures.
 
-Adding a backend means adding an adapter and registering it — no existing
+Adding a backend means adding an adapter and registering it, no existing
 branch gets edited.
 """
 

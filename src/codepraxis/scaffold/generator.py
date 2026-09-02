@@ -144,7 +144,7 @@ def describe(result: ScaffoldResult, root: Path) -> str:
             "",
             f"  {name}/",
             f"    {contract.PACK_DIR}/         what the candidate gets, and how it is graded",
-            f"    {contract.SOLUTION_DIR}/     the reference answer — never uploaded",
+            f"    {contract.SOLUTION_DIR}/     the reference answer, never uploaded",
             "",
             "It already validates. Check your setup:",
             "",

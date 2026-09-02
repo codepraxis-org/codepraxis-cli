@@ -1,6 +1,6 @@
 """Replay the local harness across a corpus of real packs.
 
-The harness mirrors the production runner. Mirrors drift, and drift is silent —
+The harness mirrors the production runner. Mirrors drift, and drift is silent, 
 a pack that stops loading, or a starter that quietly starts passing, looks like
 a normal result. This suite is the net: every pack in the corpus must load, its
 solution must pass, and its starter must not.
@@ -72,7 +72,7 @@ def test_solution_passes_and_starter_fails(pack_dirs: list[Path]) -> None:
             failures.append(f"{pack.name}: solution passed only {passed}/{total}")
 
         if starter is not None and starter.all_passed:
-            failures.append(f"{pack.name}: starter passes every case — tests do not discriminate")
+            failures.append(f"{pack.name}: starter passes every case, tests do not discriminate")
 
         for diagnostic in result.errors:
             failures.append(f"{pack.name}: {diagnostic}")

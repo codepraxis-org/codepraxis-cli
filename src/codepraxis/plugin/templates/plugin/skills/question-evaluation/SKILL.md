@@ -1,6 +1,6 @@
 ---
 name: question-evaluation
-description: Use when judging whether a CodePraxis question is any good — after planning it, after building it, or before shipping it. Covers the review checklist, how to measure whether a model can answer it from the brief alone, and how to write the report. For what makes a question worth asking see question-design; for the runner's rules see pack-contract.
+description: Use when judging whether a CodePraxis question is any good, after planning it, after building it, or before shipping it. Covers the review checklist, how to measure whether a model can answer it from the brief alone, and how to write the report. For what makes a question worth asking see question-design; for the runner's rules see pack-contract.
 ---
 
 # Judging a question
@@ -11,7 +11,7 @@ Two halves. The review is cheap and always runs. The simulation costs a
 container run and answers the one question nobody can answer by reading.
 
 **Findings warn, they never block.** Say plainly that a question is not ready
-and why, then stop. Whether to ship anyway is the author's call — you are not
+and why, then stop. Whether to ship anyway is the author's call. You are not
 in a position to overrule a human on a judgement like this, and a hard block
 would only teach people to skip the step.
 
@@ -22,12 +22,12 @@ guessing.
 
 | | after plan | after build | before ship |
 |---|---|---|---|
-| Review — signal, cases, time, contract | ✅ | ✅ | ✅ |
-| Review — solution, starter, brief/files | spec only | ✅ | ✅ |
+| Review, signal, cases, time, contract | ✅ | ✅ | ✅ |
+| Review, solution, starter, brief/files | spec only | ✅ | ✅ |
 | Simulation | **no** | ✅ | reuse the report |
 
 **The simulation does not run during planning.** It takes minutes, and planning
-is a conversation — making someone wait on a background agent mid-discussion is
+is a conversation, making someone wait on a background agent mid-discussion is
 worse than the estimate it replaces. There is also no pack yet, so the best it
 could produce is a guess about a brief, while the same work after build is
 scored by the question's real tests.
@@ -38,7 +38,7 @@ costs a container run to re-learn what you already know.
 ## The review
 
 Work through these against `spec.md` and, once it exists, the pack. Report what
-fails and why it matters — not a score.
+fails and why it matters, not a score.
 
 **Signal.** One falsifiable sentence, and the question actually tests it. If
 the spec says "tests Python" there is no question yet, only a topic.
@@ -55,7 +55,7 @@ A first pass should be reachable early.
 *every* container load, not once.
 
 **Contract precise, approach silent.** The brief must say exactly what "done"
-looks like — invocation, output shape, error behaviour — and must not hint at
+looks like, invocation, output shape, error behaviour, and must not hint at
 how. Vagueness about the contract is a bug; vagueness about the approach is
 the point.
 
@@ -63,7 +63,7 @@ Once the pack exists, four more that only the files can answer:
 
 **The solution does the work.** A reference solution that hardcodes an expected
 value passes validation and proves nothing about whether the question is
-solvable. This is the most common way a question ships broken — check it
+solvable. This is the most common way a question ships broken, check it
 first.
 
 **The starter fails for the right reason.** Missing work, not a syntax error or
@@ -81,7 +81,7 @@ The empirical half: can a model answer this from the brief alone?
 
 > **It must run in a clean context.** If the same context that designed or
 > built the question also attempts it, it already knows the answer and the
-> number is worthless — worse than worthless, because it looks like evidence.
+> number is worthless, worse than worthless, because it looks like evidence.
 > Use a subagent. Give it the brief and `source/`, nothing else. Never the
 > spec, never `solution/`, never the conversation.
 
@@ -106,7 +106,7 @@ That prints `MEASURED the attempt passed N/M cases`. Fewer is better.
 
 | Result | Reading |
 |---|---|
-| Passes most cases | Too easy. The brief is doing the work — bury a fact the model cannot guess, or move from authoring to debugging |
+| Passes most cases | Too easy. The brief is doing the work, bury a fact the model cannot guess, or move from authoring to debugging |
 | Passes some | The target. A model should accelerate a candidate, not replace them |
 | Passes none | Usually the brief is unclear rather than the question hard. Look again before celebrating |
 
@@ -130,16 +130,16 @@ Adjust for volume and reading load, then say which way you adjusted and why.
 
 ## The report
 
-Write `challenges/<slug>/evaluation.md` — chat output dies with the session,
+Write `challenges/<slug>/evaluation.md`, chat output dies with the session,
 and this needs to survive until approve time, which may be the next day.
 
 Keep it short enough to read before approving.
 
 ```markdown
-# Evaluation — <slug>
+# Evaluation, <slug>
 
 **Verdict:** ready | not ready
-**Difficulty:** 7/10 — a model passed 1 of 3 bugs cold
+**Difficulty:** 7/10, a model passed 1 of 3 bugs cold
 
 ## Blocking
 - The reference solution hardcodes the expected total, so the question is

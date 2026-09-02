@@ -39,13 +39,13 @@ written once.
 
 ### Adding things
 
-- **A lint rule** — a new file in `validation/rules/`, registered. No edits elsewhere.
-- **A backend** (`backend.conf`'s `BACKEND`) — a new `BackendAdapter` in
+- **A lint rule** a new file in `validation/rules/`, registered. No edits elsewhere.
+- **A backend** (`backend.conf`'s `BACKEND`), a new `BackendAdapter` in
   `execution/local/backends.py`, registered. Declare honestly whether the local
   tier can run it; a backend that needs container-only infrastructure should set
   `locally_supported = False` rather than emit false failures.
-- **An output format** — a new class satisfying `Reporter`.
-- **An execution tier** — a new class satisfying `Executor`.
+- **An output format** a new class satisfying `Reporter`.
+- **An execution tier** a new class satisfying `Executor`.
 
 ### Mirroring the runner
 
@@ -56,6 +56,6 @@ records provenance per constant. When you change it:
 2. Add a conformance case that would fail under the old behaviour.
 
 Where the local tier cannot reproduce the runner, emit a
-`Severity.UNVERIFIABLE` diagnostic. Never guess — a false pass locally is worse
+`Severity.UNVERIFIABLE` diagnostic. Never guess, a false pass locally is worse
 than no local check at all, because it costs an author a full remote cycle to
 discover.

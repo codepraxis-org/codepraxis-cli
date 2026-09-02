@@ -10,9 +10,9 @@ name: release
 #
 # This is only possible because the repository is public: environment protection
 # rules are unavailable on private repos under GitHub Free. If it is ever made
-# private again, restore the structural gate — set the `pypi` job's condition
+# private again, restore the structural gate, set the `pypi` job's condition
 # back to `github.event_name == 'workflow_dispatch' && inputs.target == 'pypi'`
-# — because the reviewer requirement will silently stop being enforced.
+#, because the reviewer requirement will silently stop being enforced.
 on:
   push:
     tags: ["v*"]

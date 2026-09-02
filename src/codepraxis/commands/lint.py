@@ -1,4 +1,4 @@
-"""``codepraxis lint`` — static checks only, no execution.
+"""``codepraxis lint``, static checks only, no execution.
 
 Fast enough to run on every save, and safe to run against a pack you did not
 write, because no pack code is imported.

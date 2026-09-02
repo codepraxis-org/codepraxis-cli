@@ -1,7 +1,7 @@
 """Machine-readable output for CI.
 
 The shape here is the contract other tools consume, so it is written explicitly
-rather than derived by reflection over the dataclasses — a field rename in the
+rather than derived by reflection over the dataclasses, a field rename in the
 domain layer should not silently reshape published JSON.
 """
 

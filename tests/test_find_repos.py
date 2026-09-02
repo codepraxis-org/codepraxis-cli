@@ -12,7 +12,7 @@ Three properties matter enough to pin down:
   60 an hour unauthenticated. Inspecting everything would exhaust an author's
   hour in three searches.
 
-Fixtures are synthetic — see CONTRIBUTING.md on the content boundary.
+Fixtures are synthetic, see CONTRIBUTING.md on the content boundary.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ class TestQuery:
         assert "fork:false" in query
 
     def test_has_a_star_floor_but_no_ceiling(self):
-        """A popular repo is not disqualified — the candidate is not asked to
+        """A popular repo is not disqualified, the candidate is not asked to
         reproduce it, and AI-solvability is measured directly later."""
         query = discovery.build_query("agent")
         assert "stars:>=10" in query

@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Bash(codepraxis:*)
 
 Open `$1` the way a candidate gets it.
 
-This is read-only. Do not edit the question here — if something is wrong, note
+This is read-only. Do not edit the question here, if something is wrong, note
 it and fix it with `/codepraxis:build` afterwards.
 
 1. Confirm it validates first: `codepraxis validate $1`. There is no point
@@ -19,7 +19,7 @@ it and fix it with `/codepraxis:build` afterwards.
    codepraxis edit <challenge-id> --open
    ```
 
-   If it is not published yet, say so plainly — a pre-publish container needs
+   If it is not published yet, say so plainly, a pre-publish container needs
    platform support that does not exist yet, so the honest answer today is
    either publish it as a draft first with `/codepraxis:ship`, or inspect the
    files locally.

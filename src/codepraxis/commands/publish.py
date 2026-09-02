@@ -1,10 +1,10 @@
-"""``codepraxis ship`` — publish a validated pack to your company.
+"""``codepraxis ship``, publish a validated pack to your company.
 
 Publishing is outward-facing and effectively irreversible: candidates can be
 assigned the challenge immediately. So the flow is deliberately strict.
 
 1. **Validate remotely first.** A pack is only publishable off the back of a
-   passing run in the real runner. Local results never qualify — they cannot
+   passing run in the real runner. Local results never qualify. They cannot
    observe ``setup.sh``, the image's packages, or the LLM proxy.
 2. **Show the company and confirm.** The server derives ownership from the API
    key; the CLI never sends a company id, because a client-supplied owner is
@@ -62,7 +62,7 @@ def run(
     if not pack.has_solution:
         raise PraxisError(
             f"{pack.name} has no solution/ directory. A reference solution is required "
-            f"before publishing — it is what proves the challenge is solvable."
+            f"before publishing. It is what proves the challenge is solvable."
         )
 
     # Credentials are resolved lazily so an injected client (tests, and any
@@ -88,7 +88,7 @@ def run(
         "status": "published" if live else "draft",
     }
     # With an id, this publishes a new version of an existing question. Without
-    # one the platform creates a new question — which is why editing a pack and
+    # one the platform creates a new question, which is why editing a pack and
     # re-publishing used to leave a duplicate behind.
     if challenge_id is not None:
         body["challenge_id"] = challenge_id

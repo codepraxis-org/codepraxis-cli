@@ -55,7 +55,7 @@ class QuestionLayoutRule:
 
     The reference solution is resolved as the pack's sibling. When packs were
     themselves the top-level directories, every pack under a shared parent
-    resolved to the *same* ``solution/`` — so scaffolding a second question
+    resolved to the *same* ``solution/``, so scaffolding a second question
     wrote into the first one's reference solution, silently, with no history to
     recover from. This is an error rather than a warning because the failure it
     prevents destroys work.

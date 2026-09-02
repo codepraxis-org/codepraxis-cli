@@ -8,7 +8,7 @@ copying ``._tests/test_{n}.py`` to ``._tests/test.py``):
 3. else the LAST key in the file, by insertion order
 4. if that still yields 0, the runner raises
 
-Insertion order matters, so the TOC must be parsed with ordering preserved —
+Insertion order matters, so the TOC must be parsed with ordering preserved, 
 ``json.load`` into a dict does this on every supported Python version.
 """
 

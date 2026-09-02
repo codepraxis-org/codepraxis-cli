@@ -8,7 +8,7 @@ Within the subprocess the execution is faithful to ``koro/test_runner.py``: the
 cases run in-process so ``self.msg`` is readable afterwards, which is what
 decides pass/fail.
 
-Deliberately standalone — it imports nothing from ``praxis`` so it can be
+Deliberately standalone. It imports nothing from ``praxis`` so it can be
 executed by any interpreter, including one where the CLI is not installed.
 
 Protocol: ``python worker.py <config.json> <results.json>``. Results are written
@@ -95,7 +95,7 @@ def _discover(instance):
 
 #: koro has four modes and this tier can only judge one of them.
 #:
-#: - ``1``  the case decides its own verdict via ``self.msg``, in-process —
+#: - ``1``  the case decides its own verdict via ``self.msg``, in-process, 
 #:          reproducible here.
 #: - ``0``  koro runs the candidate's executable and compares to the expected
 #:          output the case returns.

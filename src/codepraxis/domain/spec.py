@@ -7,7 +7,7 @@ research reads "write down the architecture" as an internal step and keeps
 going, because stopping feels like failing to finish.
 
 So approval is *state on disk*, not a moment in a conversation. A chat exchange
-leaves no trace — compact the transcript, or run the next step in a fresh
+leaves no trace, compact the transcript, or run the next step in a fresh
 session or on another machine, and there is nothing left to check. A file
 survives all three.
 
@@ -125,7 +125,7 @@ def approve(question_dir: Path) -> Spec:
 def require_approved(pack_dir: Path) -> Spec:
     """The gate `build` and `ship` sit behind.
 
-    Raises with the specific next step rather than a generic refusal — an
+    Raises with the specific next step rather than a generic refusal, an
     author blocked by a gate they do not understand simply works around it.
     """
     from ..errors import PraxisError

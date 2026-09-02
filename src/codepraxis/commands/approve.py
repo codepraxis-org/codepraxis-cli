@@ -1,8 +1,8 @@
-"""``codepraxis approve`` — accept a plan, on the record.
+"""``codepraxis approve``, accept a plan, on the record.
 
 This is the handshake between planning and building. It is a command rather
 than a spoken "yes" in chat because the next step may run in a fresh session,
-on another machine, or by a colleague — none of whom can see the conversation
+on another machine, or by a colleague, none of whom can see the conversation
 where approval was given.
 """
 
@@ -42,8 +42,8 @@ def run(root: Path, selector: str | None = None) -> int:
 def _resolve_question(root: Path, selector: str | None) -> Path:
     """Find the question to approve.
 
-    A question with a plan but no pack yet is the normal case here — planning
-    runs before any code exists — so this cannot go through pack discovery.
+    A question with a plan but no pack yet is the normal case here, planning
+    runs before any code exists, so this cannot go through pack discovery.
     """
     root = root.resolve()
 

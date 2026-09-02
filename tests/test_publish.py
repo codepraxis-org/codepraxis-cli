@@ -4,7 +4,7 @@ These cover the rules that protect a candidate-facing action: a pack cannot be
 published without a reference solution or a passing remote validation, and the
 CLI never asserts which company owns the result.
 
-Packs here are synthetic — see CONTRIBUTING.md on the content boundary.
+Packs here are synthetic, see CONTRIBUTING.md on the content boundary.
 """
 
 from __future__ import annotations

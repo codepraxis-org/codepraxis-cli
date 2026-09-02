@@ -1,6 +1,6 @@
 """Active-instruction resolution must match the runner's precedence exactly.
 
-Fixtures here are synthetic — see CONTRIBUTING.md on the content boundary.
+Fixtures here are synthetic, see CONTRIBUTING.md on the content boundary.
 """
 
 from __future__ import annotations

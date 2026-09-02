@@ -1,6 +1,6 @@
 """Static rules must catch contract violations without running pack code.
 
-Every fixture here is synthetic — see CONTRIBUTING.md on the content boundary.
+Every fixture here is synthetic, see CONTRIBUTING.md on the content boundary.
 """
 
 from __future__ import annotations
@@ -130,7 +130,7 @@ class TestQuestionLayout:
     The solution is found as the pack's sibling. When packs were themselves the
     top-level directories, every pack under a shared parent pointed at the same
     `solution/`, so scaffolding a second question overwrote the first one's
-    reference solution — silently, with no history to recover it from.
+    reference solution, silently, with no history to recover it from.
     """
 
     def _flat_pack(self, tmp_path, name="demo"):
@@ -244,7 +244,7 @@ class TestInstructions:
 
 
 class TestScaffold:
-    """A generated pack must be immediately valid — that is the whole point."""
+    """A generated pack must be immediately valid. That is the whole point."""
 
     def test_generated_pack_lints_clean(self, tmp_path):
         from codepraxis.scaffold.generator import create
@@ -339,7 +339,7 @@ class TestPluginInstructions:
 
     So the printed path must be "./"-prefixed: that cannot be parsed as
     owner/repo, and unlike an absolute path it is the same string on every
-    machine — which is the whole point, since the instructions get copied
+    machine, which is the whole point, since the instructions get copied
     between laptops.
     """
 
@@ -374,7 +374,7 @@ class TestPluginInstructions:
         """Marketplace names are global in Claude Code.
 
         Sharing a name means installing locally silently displaces the hosted
-        plugin, or is refused outright — which is exactly the collision this
+        plugin, or is refused outright, which is exactly the collision this
         naming avoids.
         """
         from codepraxis.plugin import installer
@@ -482,7 +482,7 @@ class TestPluginInstructions:
 
         If this manifest's source path drifts from where the plugin actually
         lives, `/plugin marketplace add codepraxis-org/codepraxis-cli` resolves
-        to nothing — and it fails for every user at once, not just us.
+        to nothing, and it fails for every user at once, not just us.
         """
         repo_root = Path(__file__).resolve().parents[1]
         manifest_path = repo_root / ".claude-plugin" / "marketplace.json"

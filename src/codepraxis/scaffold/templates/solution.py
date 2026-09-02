@@ -1,4 +1,4 @@
-"""__TITLE__ — reference solution."""
+"""__TITLE__, reference solution."""
 
 import sys
 

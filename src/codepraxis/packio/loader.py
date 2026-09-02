@@ -1,6 +1,6 @@
 """Load a :class:`Pack` from a directory.
 
-Filesystem in, domain object out. Nothing here imports or executes pack code —
+Filesystem in, domain object out. Nothing here imports or executes pack code, 
 that boundary is what lets ``praxis lint`` inspect an untrusted pack safely.
 """
 
@@ -15,7 +15,7 @@ from ..domain.pack import Backend, Pack
 from ..errors import PackError
 from .toc import resolve_active_index
 
-#: Sibling of the pack directory, never inside it — keeping the reference
+#: Sibling of the pack directory, never inside it, keeping the reference
 #: solution out of the pack is what stops it being uploaded to candidates.
 SOLUTION_DIR_NAME = "solution"
 ATTEMPT_DIR_NAME = ".attempt"
@@ -44,7 +44,7 @@ def find_solution_dir(pack_dir: Path) -> Path | None:
     """Locate the reference solution beside the pack.
 
     Layouts supported, in order of preference:
-      ``<pack_dir>/../solution``  — CLI layout, and the question-bank CI layout
+      ``<pack_dir>/../solution``, CLI layout, and the question-bank CI layout
     """
     candidate = pack_dir.parent / SOLUTION_DIR_NAME
     return candidate if candidate.is_dir() else None

@@ -17,7 +17,7 @@ class Severity(enum.Enum):
 
     ERROR = "error"
     WARNING = "warning"
-    #: Something this tier structurally cannot check — e.g. the local tier
+    #: Something this tier structurally cannot check, e.g. the local tier
     #: cannot observe ``setup.sh`` or the container's package set. Reported so
     #: authors never mistake a local pass for a full validation.
     UNVERIFIABLE = "unverifiable"
@@ -28,7 +28,7 @@ class CaseStatus(enum.Enum):
     FAIL = "fail"
     TIMEOUT = "timeout"
     ERROR = "error"
-    #: The case could not be judged here — it needs infrastructure this tier
+    #: The case could not be judged here. It needs infrastructure this tier
     #: does not have (the LLM proxy, a package installed by setup.sh). Counting
     #: it as a failure would send authors chasing a bug that does not exist.
     UNVERIFIABLE = "unverifiable"
@@ -37,12 +37,12 @@ class CaseStatus(enum.Enum):
 class Fixture(enum.Enum):
     """Which code is under test in the workspace."""
 
-    #: Only ``source/`` — the candidate's starting point. Expected to FAIL;
+    #: Only ``source/``, the candidate's starting point. Expected to FAIL;
     #: a starter that passes means the tests do not discriminate.
     STARTER = "starter"
-    #: ``source/`` overlaid with ``solution/`` — expected to PASS.
+    #: ``source/`` overlaid with ``solution/``, expected to PASS.
     SOLUTION = "solution"
-    #: ``source/`` overlaid with ``.attempt/`` — someone's try at the question,
+    #: ``source/`` overlaid with ``.attempt/``, someone's try at the question,
     #: used to measure how far a model gets from the brief alone.
     #:
     #: Deliberately has no expectation. STARTER failing and SOLUTION passing are
@@ -74,7 +74,7 @@ class CaseResult:
     #: On pass, the tuple's second element; on fail, ``self.msg``.
     output: str = ""
     duration_ms: float = 0.0
-    #: True when the case sits beyond ``RUN`` — executed for author feedback
+    #: True when the case sits beyond ``RUN``, executed for author feedback
     #: but not shown in the candidate panel.
     hidden: bool = False
 

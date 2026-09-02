@@ -1,6 +1,6 @@
 """Rule registry and the static pass.
 
-Adding a rule means writing a class and registering it here — no dispatcher to
+Adding a rule means writing a class and registering it here, no dispatcher to
 edit, no existing file to touch beyond the one-line registration.
 """
 
@@ -44,7 +44,7 @@ def register(rule: Rule) -> None:
 def lint(pack: Pack) -> list[Diagnostic]:
     """Run every rule over ``pack``.
 
-    A rule that raises is reported rather than allowed to abort the pass — one
+    A rule that raises is reported rather than allowed to abort the pass, one
     broken rule must not hide every other finding.
     """
     findings: list[Diagnostic] = []

@@ -1,6 +1,6 @@
 # Releasing
 
-`codepraxis` is published to PyPI. **A version number can never be reused** —
+`codepraxis` is published to PyPI. **A version number can never be reused**, 
 even a deleted release permanently burns its version. Treat every publish as
 irreversible.
 
@@ -8,9 +8,9 @@ irreversible.
 
 The GitHub side is done: `codepraxis-org/codepraxis-cli` is private, and the
 `pypi` and `testpypi` environments exist. What remains can only be done from a
-browser signed in to PyPI — there is no API for creating a Trusted Publisher.
+browser signed in to PyPI. There is no API for creating a Trusted Publisher.
 
-### 1. TestPyPI — https://test.pypi.org
+### 1. TestPyPI, https://test.pypi.org
 
 Do this one first; it is the rehearsal target and mistakes there are cheap.
 
@@ -24,7 +24,7 @@ Account settings → **Publishing** → *Add a new pending publisher*:
 | Workflow name | `release.yml` |
 | Environment name | `testpypi` |
 
-### 2. PyPI — https://pypi.org
+### 2. PyPI, https://pypi.org
 
 Same form, one field different:
 
@@ -37,7 +37,7 @@ Same form, one field different:
 | Environment name | **`pypi`** |
 
 A *pending* publisher claims the name `codepraxis` and creates the project on
-first upload, so registering a placeholder release is unnecessary — but do add
+first upload, so registering a placeholder release is unnecessary, but do add
 it before someone else takes the name.
 
 ### 3. Enable 2FA
@@ -56,7 +56,7 @@ maintainer to approve the PyPI upload. Nothing reaches PyPI unattended, and the
 approval is recorded against whoever gave it rather than being invisible in
 someone's shell history.
 
-This works because the repository is public — environment protection rules are
+This works because the repository is public, environment protection rules are
 unavailable on private repos under GitHub Free, where GitHub rejects them with
 HTTP 422.
 
@@ -87,7 +87,7 @@ python -m twine check --strict dist/*
 python -m venv /tmp/smoke && /tmp/smoke/bin/pip install dist/*.whl
 /tmp/smoke/bin/codepraxis --version
 
-# 4. Tag — runs every gate, publishes to TestPyPI, then waits for approval
+# 4. Tag, runs every gate, publishes to TestPyPI, then waits for approval
 git tag v0.2.0 && git push origin v0.2.0
 
 # 5. Approve the PyPI step
@@ -112,16 +112,16 @@ question bank is not; see CONTRIBUTING.md.
 ## Versioning
 
 Semantic versioning, where the public contract is **the CLI surface and the pack
-format** — not the Python API. `codepraxis.*` modules are internal and may change in
+format**, not the Python API. `codepraxis.*` modules are internal and may change in
 any release.
 
-- **patch** — bug fixes, better diagnostics
-- **minor** — new commands, new lint rules, new pack fields
-- **major** — a pack that validated before now fails, or a command changes shape
+- **patch** bug fixes, better diagnostics
+- **minor** new commands, new lint rules, new pack fields
+- **major** a pack that validated before now fails, or a command changes shape
 
 Because the CLI talks to the platform, every request carries
 `X-Praxis-CLI-Version`. When the server drops support for a pack contract, it
-returns a clear upgrade error rather than failing obscurely — so shipping a
+returns a clear upgrade error rather than failing obscurely, so shipping a
 breaking pack-format change means updating the server's minimum supported
 version in the same release.
 

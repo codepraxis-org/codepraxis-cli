@@ -2,7 +2,7 @@
 
 This is the authoritative tier. It runs the pack in the production runner image
 on CodePraxis infrastructure, so it exercises everything the local harness
-cannot — ``setup.sh``, the image's package set, the LLM proxy, real container
+cannot, ``setup.sh``, the image's package set, the LLM proxy, real container
 CPU and memory, and the packaged zip layout.
 
 Only a passing remote run permits publishing, and the run id it returns is what
@@ -98,7 +98,7 @@ class RemoteExecutor:
     def _say(self, message: str) -> None:
         """Progress to stderr, flushed.
 
-        stderr because stdout may be a machine-readable report — `--json` has to
+        stderr because stdout may be a machine-readable report, `--json` has to
         stay parseable. Flushed because Python block-buffers a pipe, so
         `ship | tail` showed nothing at all until the process exited: fifteen
         minutes indistinguishable from a hang.
@@ -147,7 +147,7 @@ class RemoteExecutor:
 
         raise PraxisError(
             f"Validation run {run_id} did not finish within {self._timeout}s. "
-            f"It may still be running — check the dashboard, or query it with "
+            f"It may still be running, check the dashboard, or query it with "
             f"that run id."
         )
 

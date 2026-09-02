@@ -4,11 +4,11 @@ The runner does this with rsync into ``/home/praxis/{foldername}``:
 
     rsync -a /praxis/codeFromServer/{foldername}/source/ /home/praxis/{foldername}/
 
-Note the trailing slash — ``source/``'s *contents* land in the workspace, not a
+Note the trailing slash, ``source/``'s *contents* land in the workspace, not a
 nested ``source`` directory. For the SOLUTION fixture, ``solution/`` is then
 overlaid preserving relative paths, matching how the question-bank validator
 untars the reference solution over the workspace. ATTEMPT works identically,
-overlaying ``.attempt/`` instead — which is what lets an attempt be measured
+overlaying ``.attempt/`` instead, which is what lets an attempt be measured
 against the question's real tests rather than judged by eye.
 """
 
@@ -24,7 +24,7 @@ from ...domain.pack import Pack
 from ...domain.results import Fixture
 from ...errors import HarnessError
 
-#: Copied into the workspace like anything else — tests may inspect git history,
+#: Copied into the workspace like anything else, tests may inspect git history,
 #: and the authoring guide requires ``source/`` to carry a baseline commit.
 _EXCLUDED_NAMES = frozenset({"__pycache__", ".DS_Store"})
 
@@ -67,7 +67,7 @@ def materialize(pack: Pack, fixture: Fixture) -> Iterator[Path]:
     if fixture is Fixture.ATTEMPT and not pack.has_attempt:
         raise HarnessError(
             "This pack has no .attempt/ directory, so the ATTEMPT fixture cannot be built. "
-            "An attempt is written by whoever is measuring the question — it holds "
+            "An attempt is written by whoever is measuring the question. It holds "
             "someone's try at it, overlaid on source/ the way solution/ is."
         )
 

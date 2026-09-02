@@ -2,7 +2,7 @@
 
 The runner imports this file and instantiates ``testCases`` with the candidate's
 workspace path. A case passes if and only if ``self.msg == "PASS"`` when the
-method returns — the return value is what the candidate panel displays, not the
+method returns, the return value is what the candidate panel displays, not the
 verdict.
 """
 

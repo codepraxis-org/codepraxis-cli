@@ -95,8 +95,8 @@ class LocalExecutor:
 
         Escalates to a warning when the local interpreter is *newer*, because
         that gap silently produces packs that pass here and fail there. The
-        difference is often semantic rather than syntactic — ``Union[X, X]``
-        collapses on 3.12+ and raises on 3.10 — so nothing static catches it,
+        difference is often semantic rather than syntactic, ``Union[X, X]``
+        collapses on 3.12+ and raises on 3.10, so nothing static catches it,
         and a dim note gets read as housekeeping.
         """
         local = (sys.version_info.major, sys.version_info.minor)
@@ -203,10 +203,10 @@ class LocalExecutor:
                     severity=Severity.UNVERIFIABLE,
                     code="local.missing-infrastructure",
                     message=(
-                        "Some cases need the runner rather than this machine — an LLM "
+                        "Some cases need the runner rather than this machine, an LLM "
                         "endpoint, or a koro mode only the runner implements (default, "
                         "override 0, override 2). They are reported as unverifiable "
-                        "rather than failed — run `codepraxis validate --remote` to judge them."
+                        "rather than failed, run `codepraxis validate --remote` to judge them."
                     ),
                 )
             )

@@ -44,7 +44,7 @@ FORBIDDEN_CONTENT = (
 )
 
 #: Paths exempt from the *path* rules only. The scaffold ships first-party
-#: templates that are deliberately named like pack files — that is what makes
+#: templates that are deliberately named like pack files. That is what makes
 #: `codepraxis new` work. Their contents are still scanned for credentials, and
 #: the exemption is a literal prefix so it cannot widen by accident.
 ALLOWED_PATH_PREFIXES = (
@@ -104,7 +104,7 @@ def main(argv: list[str]) -> int:
     archives = sorted(list(dist.glob("*.whl")) + list(dist.glob("*.tar.gz")))
 
     if not archives:
-        print(f"error: no artifacts found in {dist}/ — run `python -m build` first", file=sys.stderr)
+        print(f"error: no artifacts found in {dist}/, run `python -m build` first", file=sys.stderr)
         return 2
 
     problems: list[str] = []

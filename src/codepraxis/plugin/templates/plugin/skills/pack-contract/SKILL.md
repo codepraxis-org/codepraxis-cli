@@ -1,6 +1,6 @@
 ---
 name: pack-contract
-description: Use when writing or debugging the files inside a CodePraxis question — the testCases class, the pack layout, setup.sh, or anything the runner reads. Covers the mechanical contract, the two-fixture rule, container constraints, and how to read validate output. For deciding whether a question is any good, see question-design.
+description: Use when writing or debugging the files inside a CodePraxis question, the testCases class, the pack layout, setup.sh, or anything the runner reads. Covers the mechanical contract, the two-fixture rule, container constraints, and how to read validate output. For deciding whether a question is any good, see question-design.
 ---
 
 # The pack contract
@@ -30,7 +30,7 @@ challenges/<slug>/
 
 Each question gets its own directory. The solution is found as the pack's
 sibling, so two questions sharing a parent would resolve to the same
-`solution/` — that is how one question's reference answer gets overwritten by
+`solution/`. That is how one question's reference answer gets overwritten by
 another's.
 
 `solution/` must never be inside `pack/`. The pack is uploaded verbatim.
@@ -39,14 +39,14 @@ another's.
 
 Every question is validated twice:
 
-- **solution** — `source/` + `solution/` overlaid. Must pass **everything**.
-- **starter** — `source/` alone. Must **fail**.
+- **solution** `source/` + `solution/` overlaid. Must pass **everything**.
+- **starter** `source/` alone. Must **fail**.
 
 A starter that passes means the tests do not discriminate, and every candidate
 scores full marks. When you write a case, ask: *what in `source/` makes this
 fail today?* If nothing does, the case is decorative.
 
-Keep `source/` minimal — the stub the grader calls, and nothing that implies a
+Keep `source/` minimal, the stub the grader calls, and nothing that implies a
 solution architecture. Never leave a working implementation there.
 
 ## The `testCases` contract
@@ -73,7 +73,7 @@ Non-negotiables, each of which breaks the runner:
 - **One constructor argument.** A two-arg `__init__` fails with
   `missing 1 required positional argument`.
 - **`self.msg == "PASS"`** decides the verdict **in override 1**. The return
-  value never does. Other modes ignore `self.msg` entirely — see below.
+  value never does. Other modes ignore `self.msg` entirely, see below.
 - **No zero-padded names.** Ordering uses the first run of digits in the method
   name, so `test_case_01` and `test_case_1` collide. Use `test_case_1`,
   `test_case_2`.
@@ -85,7 +85,7 @@ Non-negotiables, each of which breaks the runner:
   imports the test module immediately after spawning `setup.sh`, so the install
   may not have finished. Import inside the method instead.
 
-The returned tuple is `(expected, output)`. Write both for a candidate to read —
+The returned tuple is `(expected, output)`. Write both for a candidate to read, 
 "Empty list, then add one note" beats "Case 1 input".
 
 ## Four ways to judge a case
@@ -116,11 +116,11 @@ def test_case_1(self, timeout_window=15000, override=1):
 
 **Override 0 compares with `==` after a strip.** `"7.0"` fails against `"7"`,
 and so does a differently ordered JSON object. It is the least code and the
-most brittle — use it only for output you control exactly, and use override 1
+most brittle, use it only for output you control exactly, and use override 1
 for anything numeric or structured.
 
 **Override 2 never runs the code.** It reads the files and judges what it
-reads, so it cannot tell you whether something works — only whether it looks
+reads, so it cannot tell you whether something works, only whether it looks
 right. That makes it the wrong tool for correctness and the right one for the
 design decisions a question is really testing:
 
@@ -136,12 +136,12 @@ subfolder. `files` also accepts several files, or a dict keyed by language
 (`{"python": [...], "c": [...]}`) for multi-language questions.
 
 Files are read as **text**, so markdown, mermaid, PlantUML, YAML and SQL all
-work — a question can require a `design.md` and grade the reasoning in it. A
+work, a question can require a `design.md` and grade the reasoning in it. A
 PNG or draw.io export cannot be graded; it arrives as mangled bytes. If the
 question wants a diagram assessed, the brief must ask for it in text.
 
 A named file that does not exist fails the case with "File(s) not found". That
-is usually right — they were told to write it — but **the brief must state the
+is usually right, they were told to write it, but **the brief must state the
 exact filename** the case checks.
 
 **Give the model a reference to check against.** "Is this design good?" invites
@@ -159,13 +159,13 @@ def test_case_8(self, override=2):
              f"{reference}\n\nDoes the document address each point?"])
 ```
 
-Reviewing the document **with** the code is stronger again — it catches the
+Reviewing the document **with** the code is stronger again. It catches the
 candidate who describes one design and builds another:
 `[["design.md", "agent.py"], "Does the implementation do what the document claims?"]`
 
 **Only override 1 is checked by `codepraxis validate` locally.** The other
 three need the runner, so they are reported as unverifiable and the run comes
-back inconclusive. Use `--remote` to judge them — which publishing requires
+back inconclusive. Use `--remote` to judge them, which publishing requires
 anyway.
 
 ## Cases run one at a time
@@ -173,7 +173,7 @@ anyway.
 A sequential loop, each case waiting for its own timeout window *plus* the
 default one. Total submit time is the sum of every case, and candidates submit
 more than once. A case that calls a model or waits on the network is paid in
-full, every run — that is an argument for fewer, sharper cases.
+full, every run. That is an argument for fewer, sharper cases.
 
 The visible cases are re-run constantly while someone works, so they must
 finish in seconds.
@@ -186,7 +186,7 @@ finish in seconds.
   Candidates can commit locally, but nothing clones or pushes.
 - **`setup.sh` runs on every container load**, as the `praxis` user, so pip
   needs `--user`. It is not a build step: a three-minute install costs every
-  candidate three minutes. **Pin every version** — an unpinned install resolves
+  candidate three minutes. **Pin every version**, an unpinned install resolves
   to whatever is current that day, and a breaking release later fails during
   someone's assessment.
 - **Editor extensions can be installed** at setup time; that is a legitimate
@@ -212,7 +212,7 @@ Union[Sentinel, Sentinel]   # collapses and passes on 3.12+
 
 Anything newer than 3.10 is a trap: `X | Y` unions at runtime, `match`,
 `ExceptionGroup`, `tomllib`, `itertools.batched`, `typing.Self`. If in doubt,
-run `codepraxis validate --remote` — it uses the real image and costs about a
+run `codepraxis validate --remote`. It uses the real image and costs about a
 minute.
 
 ### The runner has two Python environments
@@ -223,7 +223,7 @@ something fails on import:
 | Where | What it has |
 |---|---|
 | The interpreter that **imports your test module** | `typing_extensions`, `redis`, and whatever `setup.sh` installed |
-| A subprocess spawned via `sys.executable` | bare `/usr/lib/python3.10` — **neither** |
+| A subprocess spawned via `sys.executable` | bare `/usr/lib/python3.10`, **neither** |
 
 So a case that works in-process can fail identically-written as a subprocess.
 Prefer importing the candidate's module directly over shelling out; if you must
@@ -237,7 +237,7 @@ codepraxis validate --remote <name>     # the real container; required to publis
 ```
 
 Local is advisory. It reproduces loading, ordering and scoring, but it does not
-run `setup.sh`, does not have the image's packages, and has no LLM proxy — it
+run `setup.sh`, does not have the image's packages, and has no LLM proxy. It
 reports those as notes rather than passing silently. Never treat a local pass as
 validation.
 

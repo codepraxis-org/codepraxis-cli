@@ -1,6 +1,6 @@
 # __TITLE__
 
-`total()` in `main.py` is not implemented yet — it raises.
+`total()` in `main.py` is not implemented yet. It raises.
 
 Run it:
 

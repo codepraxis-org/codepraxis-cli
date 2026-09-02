@@ -26,11 +26,11 @@ is about making the good version the easy one.
 
 ```
 challenges/webhook-debug/        one directory per question
-  spec.md                        the plan — what this tests and why
+  spec.md                        the plan, what this tests and why
   pack/                          what the runner mounts
     metadata.json                the workspace directory name
     backend.conf                 question type and language
-    publish.json                 catalog identity — id, title, difficulty
+    publish.json                 catalog identity, id, title, difficulty
     setup.sh                     installs what the question needs
     source/                      what the candidate starts from
     ._tests/test_1.py            the tests, which the candidate never sees
@@ -43,7 +43,7 @@ challenges/webhook-debug/        one directory per question
 **Every question gets its own directory, and that is load-bearing.** The
 reference solution is resolved as the pack's sibling. When packs were themselves
 the top-level directories, every pack under `challenges/` resolved to the *same*
-`challenges/solution` — so scaffolding a second question wrote into the first
+`challenges/solution`, so scaffolding a second question wrote into the first
 one's reference solution, silently, with no history in a fresh scaffold to
 recover from. A lint rule now rejects the old shape and says how to migrate.
 
@@ -60,8 +60,8 @@ archive that goes to candidates.
 
 Every question is run **twice**:
 
-- with `source/` **plus** `solution/` overlaid — this must pass every test
-- with `source/` **alone** — this must fail
+- with `source/` **plus** `solution/` overlaid. This must pass every test
+- with `source/` **alone**. This must fail
 
 The second one is what authors forget. If the starter passes, the tests do not
 discriminate and every candidate scores full marks. A question that cannot fail
@@ -93,7 +93,7 @@ the tests pass is not something a language model should be trusted with.
 They used to be steps 1 and 2 of a single command, and that did not hold. An
 agent read *"write down the question architecture"* as an internal note, never
 stopped, and went from research straight through scaffolding into writing pack
-files — with no plan ever shown to the user.
+files, with no plan ever shown to the user.
 
 The lesson is that **wording is not a gate**. An agent that has just done ten
 tool calls of research has enormous momentum toward implementing, and stopping
@@ -125,7 +125,7 @@ wrong answer produces a bad question, so it gets two phases and two gates.
 
 **Phase one is conversation.** Claude establishes three things early, because
 everything else derives from them: how long the assessment is, what stack it
-uses, and where it is coming from — a fresh idea, an existing question in some
+uses, and where it is coming from, a fresh idea, an existing question in some
 other format, or a repository to mine. Then it keeps asking until it
 understands, which is three more questions for some subjects and ten for
 others.
@@ -138,7 +138,7 @@ open-ended interview becomes an interrogation.
 **Phase two is the document.** Only written once a short sketch has been agreed,
 because producing a polished plan for the wrong question wastes everyone's time.
 
-### Gate A — can a model just solve it?
+### Gate A, can a model just solve it?
 
 Candidates have an AI agent and an LLM endpoint inside the container. So a
 question a model answers from the brief alone is not an assessment.
@@ -156,7 +156,7 @@ attempt would prove nothing, however sincerely it tried.
 **Once a pack exists, the attempt is scored by the real tests.** It is written
 to `.attempt/` and run through the `attempt` fixture, so the result is
 `passed 1 of 3` rather than an opinion. The spec's `difficulty` is derived from
-that number — with AI in the container, "how hard is this" and "how well does a
+that number, with AI in the container, "how hard is this" and "how well does a
 model do on it" are the same question.
 
 What survives the probe, strongest first: context the model has never seen
@@ -168,12 +168,12 @@ There is a real tension here. The clearer a brief is, the more one-shot-able it
 becomes. The resolution is to be **precise about the contract and silent about
 the approach**.
 
-### Gate B — can we actually provision it?
+### Gate B, can we actually provision it?
 
 Any stack is allowed. `setup.sh` runs on every container load, so Java, Go,
 Rust or a database server are all just installs. The gate does not grant
 permission; it checks that setup really provisions what the question needs and
-prices the cost. Only genuine impossibility stops a plan — Docker-in-Docker
+prices the cost. Only genuine impossibility stops a plan, Docker-in-Docker
 without privilege, or anything needing more than one container.
 
 ---
@@ -186,7 +186,7 @@ sensible questions.
 - **`curl` is not there.** It is installed during the image build and purged on
   the way out. `wget`, pip and npm survive.
 - **Git cannot reach a network.** `git-upload-pack` and friends are removed.
-  Candidates can commit locally — and some questions grade that history — but
+  Candidates can commit locally, and some questions grade that history, but
   nothing clones or pushes.
 - **Setup runs on every load, by every candidate.** Not once at build time. A
   three-minute install is three minutes of a sixty-minute assessment. It also
@@ -237,7 +237,7 @@ or whether output is going to a terminal or to JSON.
 the production runner, with the source file and line recorded next to it.
 Mirrors drift, so `tests/conformance/` replays the harness against a corpus of
 real questions and asserts the verdicts. That corpus is private and lives
-outside this repository — point `PRAXIS_CONFORMANCE_PACKS` at it.
+outside this repository, point `PRAXIS_CONFORMANCE_PACKS` at it.
 
 ---
 
@@ -245,8 +245,8 @@ outside this repository — point `PRAXIS_CONFORMANCE_PACKS` at it.
 
 | | Runs | Speed | Counts? |
 |---|---|---|---|
-| `validate --local` | Pure Python, on your machine | seconds | No — advisory |
-| `validate --remote` | The real runner image | ~1 min | **Yes — gates publish** |
+| `validate --local` | Pure Python, on your machine | seconds | No, advisory |
+| `validate --remote` | The real runner image | ~1 min | **Yes, gates publish** |
 
 Local reproduces how the runner loads, orders and scores a question, so it
 catches most mistakes in the inner loop. It is **not** the container: it does
@@ -270,7 +270,7 @@ published question can be sent to candidates immediately.
   publish into someone else's catalog.
 - **`--challenge-id` adds a version** to an existing question, keeping its id,
   assignments and history. Without it, publishing always creates a new
-  question — right the first time, a duplicate every time after.
+  question, right the first time, a duplicate every time after.
 
 ---
 
@@ -298,13 +298,13 @@ codepraxis example
 ```
 
 A bare `codepraxis` prints status, not help. It used to dump the argparse
-listing — a wall of flags that tells a new author nothing about what to *do* —
+listing, a wall of flags that tells a new author nothing about what to *do*, 
 and it is the first thing everyone types, which makes it the best onboarding
 surface we have. It reads the directory and answers one question, in the spirit
 of `git status`:
 
 ```
-codepraxis — authoring as Acme Corp
+codepraxis, authoring as Acme Corp
 
   challenges/webhook-debug
     plan        ready
@@ -317,7 +317,7 @@ Next:
 ```
 
 It only reports what it can determine from local files. Whether a question has
-*passed* validation is deliberately not guessed at — the CLI does not record run
+*passed* validation is deliberately not guessed at, the CLI does not record run
 results, and inventing a state we cannot observe is worse than omitting it.
 
 Two more onboarding rules: **every command ends by printing the next one**, and
@@ -364,14 +364,14 @@ src/codepraxis/plugin/templates/
 
 `codepraxis install claude-plugin` writes the same layout into
 `.codepraxis/claude-plugin/`, for working offline or trying a prompt edit before
-merging it. Nothing is fetched from the network — templates are copied out with
+merging it. Nothing is fetched from the network, templates are copied out with
 `importlib.resources`, so it works from a wheel, a zip or an editable install.
 
 Two details that were bugs before:
 
 - **The printed path is `./`-relative, not absolute.** Claude Code reads a bare
   `foo/bar` as a GitHub owner/repo and tries to clone it, so the prefix is
-  required — but an absolute path is machine-specific, and these instructions
+  required, but an absolute path is machine-specific, and these instructions
   get copied between laptops.
 - **The local marketplace is named `codepraxis-local`, the hosted one
   `codepraxis`.** Marketplace names are global, so sharing one means a local
@@ -390,8 +390,8 @@ every editorial tweak touched the same file as the runner mirror.
 
 ## Where to start reading
 
-- `cli.py` — the whole surface in one file
-- `domain/contract.py` — everything the runner requires, with provenance
-- `packio/loader.py` — how a directory becomes a `Pack`
-- `execution/local/executor.py` — the harness that mirrors the runner
-- `plugin/templates/` — the prompts that drive plan and build
+- `cli.py`, the whole surface in one file
+- `domain/contract.py`, everything the runner requires, with provenance
+- `packio/loader.py`, how a directory becomes a `Pack`
+- `execution/local/executor.py`, the harness that mirrors the runner
+- `plugin/templates/`, the prompts that drive plan and build

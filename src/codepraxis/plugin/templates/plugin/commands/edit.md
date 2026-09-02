@@ -8,14 +8,14 @@ Change an existing question: **$ARGUMENTS**
 
 ## Work out what kind of change this is
 
-**Details only** — title, description, difficulty, time limit, attempts, tech
+**Details only**, title, description, difficulty, time limit, attempts, tech
 stack. No code changes. One command, no rebuild:
 
 ```bash
 codepraxis edit <id> --title "..." --difficulty 2 --max-time 90
 ```
 
-**The question itself** — the brief, the starter, the tests, the solution. That
+**The question itself**, the brief, the starter, the tests, the solution. That
 means editing the pack and publishing a new version. Continue below.
 
 ## Before you change anything, read the plan
@@ -24,8 +24,8 @@ Open `challenges/<name>/spec.md`. It records what the question was *supposed* to
 test and why the cases are what they are. Changing a question without reading it
 is how a question quietly stops measuring what someone chose it for.
 
-If the change contradicts the plan — a different signal, a different duration,
-a different contract — **update the spec first and get it re-approved**:
+If the change contradicts the plan, a different signal, a different duration,
+a different contract, **update the spec first and get it re-approved**:
 
 ```bash
 codepraxis approve <name>
@@ -38,7 +38,7 @@ you decided it was.
 ## If you do not have the question locally
 
 There is no download yet. If the pack is not in this repo, say so plainly rather
-than reconstructing it from the container — a rebuilt approximation published
+than reconstructing it from the container, a rebuilt approximation published
 over a real question is worse than not fixing it. `codepraxis list` shows what
 exists; the pack has to come from wherever it was authored.
 

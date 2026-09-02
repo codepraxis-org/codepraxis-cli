@@ -1,4 +1,4 @@
-"""`codepraxis find-repos` — source material for a question."""
+"""`codepraxis find-repos`, source material for a question."""
 
 from __future__ import annotations
 
@@ -75,11 +75,11 @@ def _print_nothing_found(topic: str, language: str | None) -> None:
           + (f" in {language}." if language else ".")
           + "\n")
     print(
-        "The filters are deliberately strict — a permissive licence, alive in the\n"
+        "The filters are deliberately strict, a permissive licence, alive in the\n"
         "last ~18 months, not archived, not a fork. Things that usually help:\n"
         "  · broader words: “rag pipeline” rather than “llamaindex rag reranker”\n"
         "  · drop --language, or try the ecosystem's main one\n"
-        "  · run it again — results are sampled, so a second run differs"
+        "  · run it again, results are sampled, so a second run differs"
     )
 
 

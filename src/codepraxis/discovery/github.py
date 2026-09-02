@@ -5,7 +5,7 @@ matching :mod:`codepraxis.execution.remote.client`.
 
 Unauthenticated search allows 10 requests a minute, which is plenty for one
 search per invocation. ``GITHUB_TOKEN`` raises that to 30 and is picked up
-automatically when set, but is never required — an author should be able to
+automatically when set, but is never required, an author should be able to
 find a repository without creating a token first.
 """
 
@@ -75,7 +75,7 @@ def _translate(exc: urllib.error.HTTPError) -> PraxisError:
     if exc.code == 422:
         return PraxisError(
             "GitHub rejected the search query. A topic with unusual punctuation "
-            "can do this — try simpler words."
+            "can do this, try simpler words."
         )
     return PraxisError(f"GitHub search failed ({exc.code} {exc.reason})")
 
@@ -111,7 +111,7 @@ def languages(full_name: str) -> dict[str, int]:
 
     The search result's ``size`` is disk usage including git history and
     binaries, so it says little about how much code a candidate faces. This is
-    the honest measure, but it costs a request per repository — call it on a
+    the honest measure, but it costs a request per repository, call it on a
     shortlist, never on every result.
     """
     return _get(f"{REPO_URL}/{full_name}/languages") or {}

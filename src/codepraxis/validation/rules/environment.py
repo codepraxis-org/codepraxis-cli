@@ -59,14 +59,14 @@ class SubprocessInterpreterRule:
 
     The runner has two. The interpreter that imports the test module carries
     ``typing_extensions``, ``redis`` and whatever ``setup.sh`` installed. A
-    subprocess started from ``sys.executable`` — or from a bare ``python3`` —
+    subprocess started from ``sys.executable``, or from a bare ``python3``, 
     gets ``/usr/lib/python3.10`` with none of it. The same case can therefore
     pass written in-process and fail written as a subprocess, on an import error
     naming a package the author can see installed.
 
     **Only fires when the pack uses third-party packages at all.** Spawning the
     candidate's program is the normal way to test a command-line question, and
-    is exactly what ``codepraxis new`` generates — warning on it unconditionally
+    is exactly what ``codepraxis new`` generates, warning on it unconditionally
     would put a diagnostic on every scaffolded pack and teach authors to skip
     lint. A third-party import in the test file is the signal that this question
     depends on things ``setup.sh`` installed, which is precisely when the split
@@ -104,7 +104,7 @@ class SubprocessInterpreterRule:
                     self.code,
                     (
                         f"{hit} starts a second Python that does not share this one's "
-                        f"packages — it gets a bare /usr/lib/python3.10. This pack "
+                        f"packages. It gets a bare /usr/lib/python3.10. This pack "
                         f"imports {named}, so if the spawned code needs any of that it "
                         f"will fail in the container only. Prefer importing the "
                         f"candidate's module directly."

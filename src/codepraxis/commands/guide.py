@@ -1,4 +1,4 @@
-"""``codepraxis guide`` — the whole thing explained once.
+"""``codepraxis guide``, the whole thing explained once.
 
 Deliberately short. Two things are kept out on purpose:
 
@@ -16,7 +16,7 @@ from __future__ import annotations
 EXIT_OK = 0
 
 GUIDE = """\
-codepraxis — build real-world coding assessments
+codepraxis, build real-world coding assessments
 
   WHAT A QUESTION IS
 
@@ -30,7 +30,7 @@ codepraxis — build real-world coding assessments
   THE STEPS
 
     plan      talk it through, find real code, agree what to test
-    approve   accept the plan — nothing is built until you do
+    approve   accept the plan, nothing is built until you do
     build     Claude writes and tests the question
     ship      publish as a draft, then go live
 
@@ -50,7 +50,7 @@ codepraxis — build real-world coding assessments
   WORKING WITH CLAUDE CODE
 
     The steps above are driven by Claude. Run these two once,
-    in Claude Code — the same on every machine:
+    in Claude Code, the same on every machine:
 
         /plugin marketplace add codepraxis-org/codepraxis-cli
         /plugin install codepraxis@codepraxis

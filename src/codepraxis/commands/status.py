@@ -1,10 +1,10 @@
-"""``codepraxis`` with no arguments — where am I, and what do I type next.
+"""``codepraxis`` with no arguments, where am I, and what do I type next.
 
 A bare invocation used to print argparse help: a wall of flags that tells a new
 author nothing about what to *do*. It is also the first thing everyone types,
 which makes it the best onboarding surface the CLI has.
 
-So this reads the directory and answers one question — what is the next step —
+So this reads the directory and answers one question, what is the next step, 
 in the same spirit as ``git status``.
 
 Everything reported here is determined from local files. Whether a pack has
@@ -69,7 +69,7 @@ class PackStatus:
 def inspect_pack(path: Path) -> PackStatus:
     missing = [rel for rel in contract.REQUIRED_PACK_PATHS if not (path / rel).exists()]
 
-    # spec.md and the solution live at the question level, beside the pack —
+    # spec.md and the solution live at the question level, beside the pack, 
     # the spec describes the whole question, and keeping the solution out of
     # the pack is what stops it being packaged for candidates.
     question_dir = path.parent if path.name == contract.PACK_DIR else path
@@ -111,7 +111,7 @@ def run(root: Path | None = None) -> int:
         _print_signed_out()
         return EXIT_OK
 
-    print(f"codepraxis — authoring as {company or 'your company'}\n")
+    print(f"codepraxis, authoring as {company or 'your company'}\n")
 
     packs = [inspect_pack(path) for path in discovery.find_packs(root)]
     if not packs:
@@ -127,7 +127,7 @@ def run(root: Path | None = None) -> int:
 
 
 def _print_signed_out() -> None:
-    print("codepraxis — build real-world coding assessments\n")
+    print("codepraxis, build real-world coding assessments\n")
     print("  You are not logged in.\n")
     print("  See a real question first, no account needed:")
     print("      codepraxis example\n")
@@ -139,7 +139,7 @@ def _print_signed_out() -> None:
 
 def _print_empty() -> None:
     print("  No questions here yet.\n")
-    print("  Design one with Claude — run these in Claude Code:")
+    print("  Design one with Claude, run these in Claude Code:")
     print(f"      /plugin marketplace add {installer.HOSTED_MARKETPLACE}")
     print(f"      /plugin install {installer.PLUGIN_NAME}@{installer.HOSTED_NAME}")
     print("      /codepraxis:plan\n")

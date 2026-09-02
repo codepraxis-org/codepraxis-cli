@@ -124,7 +124,7 @@ class HumanReporter:
         if skipped and not self._verbose:
             self._line(
                 self._style.dim(
-                    f"  {skipped} thing(s) this tier cannot verify — re-run with -v, "
+                    f"  {skipped} thing(s) this tier cannot verify, re-run with -v, "
                     f"or use `codepraxis validate --remote`"
                 )
             )
@@ -133,8 +133,8 @@ class HumanReporter:
         style = self._style
         seconds = result.duration_ms / 1000.0
 
-        # A static-only result has no fixtures, so the pass/fail rules below —
-        # which are about solution vs starter — do not apply. Its verdict is
+        # A static-only result has no fixtures, so the pass/fail rules below, 
+        # which are about solution vs starter, do not apply. Its verdict is
         # simply whether any rule reported an error.
         if not result.runs:
             if result.errors:
@@ -144,7 +144,7 @@ class HumanReporter:
             return
 
         # An attempt-only run is a measurement. "PASSED" would be meaningless
-        # and "FAILED" actively misleading — a model getting nowhere is the
+        # and "FAILED" actively misleading, a model getting nowhere is the
         # result the author is hoping for.
         attempt = result.run_for(Fixture.ATTEMPT)
         if attempt is not None and len(result.runs) == 1:
@@ -176,7 +176,7 @@ class HumanReporter:
         if result.inconclusive and not result.errors:
             self._line(
                 style.warn("  INCONCLUSIVE")
-                + " some cases need infrastructure this machine lacks — use --remote"
+                + " some cases need infrastructure this machine lacks, use --remote"
             )
             self._line(style.dim(f"  {seconds:.1f}s"))
             return
@@ -198,7 +198,7 @@ class HumanReporter:
         self._line(f"{indent}{prefix} {diagnostic.message}")
 
     def close(self) -> None:
-        """Nothing buffered — output is written as each pack finishes."""
+        """Nothing buffered, output is written as each pack finishes."""
 
     def _line(self, text: str) -> None:
         self._out.write(text + "\n")

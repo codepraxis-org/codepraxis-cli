@@ -1,7 +1,7 @@
 """The static-analysis seam.
 
 A rule reads a :class:`~codepraxis.domain.pack.Pack` and reports problems. It
-must **never execute pack code** — that is what makes ``codepraxis lint``
+must **never execute pack code**. That is what makes ``codepraxis lint``
 instant and safe to run against a pack you did not write.
 
 Anything needing a live ``testCases`` instance (``RUN``, ``RunCaseInputs``)

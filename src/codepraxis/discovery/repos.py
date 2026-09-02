@@ -31,11 +31,11 @@ from . import github
 #: Licences that permit redistribution inside an assessment. Copyleft is
 #: excluded deliberately: a candidate's container is arguably distribution, and
 #: we are not going to reason about that per question. Repositories with no
-#: licence never appear at all — GitHub omits them from a `license:` search.
+#: licence never appear at all, GitHub omits them from a `license:` search.
 ALLOWED_LICENSES = ("mit", "apache-2.0", "bsd-3-clause", "bsd-2-clause", "isc")
 
 #: A floor only. There is no ceiling: a popular repository is not disqualified,
-#: because the candidate is not asked to reproduce it — they are asked to change
+#: because the candidate is not asked to reproduce it. They are asked to change
 #: it in a way we chose. What popularity buys a model is faster orientation,
 #: not the answer, and the AI-solvability check measures that directly.
 MIN_STARS = 10
@@ -62,7 +62,7 @@ SORT_MODES = (None, "stars", "updated")
 
 #: How many results to pull before sampling. Wider pool, less collision.
 #: Search has its own generous quota (10/min unauthenticated), so paging here
-#: is cheap — unlike inspection below.
+#: is cheap, unlike inspection below.
 SEARCH_PAGES = 2
 
 #: Ceiling on close inspection, which is the expensive part.
@@ -70,7 +70,7 @@ SEARCH_PAGES = 2
 #: /languages is on GitHub's *core* quota: 60 requests an hour unauthenticated,
 #: not the 10 a minute that search gets. Inspecting ten repositories to show
 #: five would exhaust an author's whole hour in three searches. So we inspect
-#: lazily — only until we have enough to show — and stop at this ceiling even
+#: lazily, only until we have enough to show, and stop at this ceiling even
 #: if that means returning fewer.
 MAX_INSPECTIONS = 8
 
@@ -159,7 +159,7 @@ def used_repos(root: Path) -> set[str]:
         except OSError:
             continue
         # The host prefix must be consumed explicitly. Left to a lazy wildcard,
-        # "github.com/a/taken" captures "github.com/a" — which matches nothing
+        # "github.com/a/taken" captures "github.com/a", which matches nothing
         # and silently disables the exclusion.
         match = re.search(
             r"^repo:\s*(?:https?://)?(?:www\.)?(?:github\.com/)?([\w.-]+/[\w.-]+)",
@@ -260,7 +260,7 @@ def _inspect(repo: Repo, client) -> bool:
         # Say so rather than quietly showing a repository whose size was never
         # checked. The usual cause is the core quota, and a silently unchecked
         # toy repository is exactly what the floor exists to catch.
-        repo.notes.append("size unchecked — GitHub rate limit")
+        repo.notes.append("size unchecked, GitHub rate limit")
 
     if by_language:
         primary = max(by_language, key=lambda key: by_language[key])
@@ -272,7 +272,7 @@ def _inspect(repo: Repo, client) -> bool:
         return False
 
     if repo.source_bytes >= LARGE_SOURCE_BYTES:
-        repo.notes.append("large — needs a clear seam")
+        repo.notes.append("large, needs a clear seam")
     if repo.stars >= 20_000:
         repo.notes.append("widely known; a model will orient fast here")
     return True

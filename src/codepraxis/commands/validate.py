@@ -1,4 +1,4 @@
-"""``codepraxis validate`` — run a pack's tests.
+"""``codepraxis validate``, run a pack's tests.
 
 The command orchestrates and nothing else: it resolves packs, asks an executor
 to run them, hands results to a reporter, and turns them into an exit code.
@@ -48,7 +48,7 @@ def run(
 
             # Static rules first. A pack whose testCases cannot be constructed
             # produces an opaque traceback when executed, so there is nothing to
-            # learn from running it — report the real cause and move on.
+            # learn from running it, report the real cause and move on.
             findings = run_rules(pack)
             if has_errors(findings):
                 reporter.report(

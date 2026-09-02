@@ -37,7 +37,7 @@ class Backend:
 class Pack:
     """A challenge pack on disk.
 
-    ``root`` is the directory holding ``metadata.json`` — the same directory
+    ``root`` is the directory holding ``metadata.json``, the same directory
     that gets zipped and uploaded.
     """
 
