@@ -89,7 +89,8 @@ this order:
 - **`task`** what the candidate spends the time doing.
 - **`starting_state`** what is given and what is missing.
 - **`implement`** the concrete deliverables, as a bullet list.
-- **`audience`** which roles it suits, what it assumes, where not to use it.
+- **`audience`** what level of developer to send it to, what it assumes, and
+  anything worth knowing before using it.
 - **`scoring`** optional; what the report will say.
 
 ### Plain English applies to the sections too
@@ -102,6 +103,12 @@ recruiter side by side, and the recruiter is not going to look anything up.
   write, rather than a "Given / Missing" table.
 - Label `audience` as **Good for** / **Needs** / **Worth knowing**, not
   "Fits / Assumes / Note".
+- **`Good for` names a seniority level**, not a job title. A recruiter is
+  deciding who to send this to, and "engineers building model-backed features
+  over existing data" does not answer that. Say "juniors and early-career
+  developers", "mid-level and above", "senior developers only". Add a short
+  reason where it helps, and use `Worth knowing` to warn when a question is
+  narrow, long, or unsuitable for a first round.
 - In `implement`, bold the deliverable and explain it in ordinary words after
   the comma.
 
