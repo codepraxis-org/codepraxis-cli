@@ -92,6 +92,30 @@ this order:
 - **`audience`** which roles it suits, what it assumes, where not to use it.
 - **`scoring`** optional; what the report will say.
 
+### Plain English applies to the sections too
+
+Same register as `description`. These are read by a hiring manager and a
+recruiter side by side, and the recruiter is not going to look anything up.
+
+- Ask `signal` as a question starting "Can they…", one line.
+- Write `starting_state` as two short paragraphs, what they get and what they
+  write, rather than a "Given / Missing" table.
+- Label `audience` as **Good for** / **Needs** / **Worth knowing**, not
+  "Fits / Assumes / Note".
+- In `implement`, bold the deliverable and explain it in ordinary words after
+  the comma.
+
+Some before and after:
+
+- Dense: "Whether an engineer can implement a sliding-window algorithm whose
+  termination depends on the interaction between window size and overlap."
+- Plain: "Can they write a loop that is guaranteed to finish, including the
+  settings that would otherwise make it run forever?"
+
+Where a question has one detail that makes it interesting, say it outright.
+"the missing director column is the whole question, the rest is plumbing" tells
+a reader more than a paragraph about data modelling.
+
 ### The rule that matters most
 
 **`signal` has to read to someone who has never opened the question.** It names
