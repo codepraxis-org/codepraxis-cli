@@ -65,6 +65,22 @@ characters. The row already shows the title, difficulty, tech stack and
 duration, so do not spend it repeating them: "Implement a rate limiter in
 Python (Medium, 60 min)" says nothing the row is not already showing.
 
+**Write it in plain English.** A recruiter reads this, not only an engineer.
+Short sentences, ordinary words, and no stacking three clauses behind a colon.
+Where a question has one detail that makes it interesting, say that detail
+plainly rather than gesturing at it.
+
+- Too dense: "Answer plain-English questions about a Git repository from the
+  command line: work out which Git operation a question implies, run it
+  read-only, and refuse cleanly when the question is outside what the history
+  can answer."
+- Plain: "Build a command-line tool that answers questions about a Git repo in
+  plain English, like "who committed last?". It has to pick the right Git
+  command, and say so when it cannot answer."
+
+Both say the same thing. The second one can be read once, at speed, by someone
+deciding whether to open it.
+
 **`description_sections`, the detail page.** A JSON object; every key optional,
 markdown bodies limited to headings, bold, bullets and inline code. Rendered in
 this order:
