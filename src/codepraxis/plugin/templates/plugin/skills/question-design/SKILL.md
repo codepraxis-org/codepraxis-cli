@@ -21,6 +21,19 @@ If you cannot write that sentence, you do not have a question yet. You have a
 topic. Everything downstream is derived from it: the cases exist to detect it,
 the rubric describes doing it well, the duration is how long it takes.
 
+**Write it down, in the spec.** It is not a thought you have once and move past.
+It becomes the `signal` section of the catalog copy at ship time, which is what
+a hiring team reads when deciding whether to ask this question at all.
+
+That copy has one rule worth knowing while the sentence is still being written:
+**it must read to someone who has never opened the question.** Name the
+capability, not the question's internals. *"Whether they notice the usage
+counter is not thread-safe"* fails, the reader does not know there is a usage
+counter. *"Whether they find a concurrency bug nobody told them to look for"*
+passes and says the same thing. A signal sentence that only parses if you have
+read the code is a note to yourself, not a description of what you are
+measuring.
+
 ## Duration is a budget, not a label
 
 Sixty minutes and three hours are structurally different questions. State where

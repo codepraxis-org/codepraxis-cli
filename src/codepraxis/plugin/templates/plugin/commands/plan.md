@@ -103,11 +103,11 @@ Then offer a short menu, each option rated:
 
 ```
 A. Retry + validation on tool dispatch
-   3 design decisions · ~80 lines · hard to game (7/10)
+   3 design decisions · ~80 lines · hard to game (3, hard)
 B. Add a second tool with routing
-   2 design decisions · ~50 lines · medium (5/10)
+   2 design decisions · ~50 lines · medium (2, medium)
 C. Cache the embedding step
-   1 design decision · ~30 lines · easy to game (3/10)
+   1 design decision · ~30 lines · easy to game (1, easy)
 
 I'd pick A. C is a one-liner a model writes instantly.
 ```
@@ -182,9 +182,18 @@ license: MIT
 
 # Harden a tool-calling agent
 
+## Signal
+The one falsifiable sentence: what this measures. Written so it reads
+to someone who has never opened the question, name the capability,
+never the internals. This becomes the catalog copy at ship time.
+
 ## The problem
 What this repo is, in two sentences. Then what breaks, and what they
 must make survive it.
+
+## Starting state
+What `source/` already contains and what was deliberately left out,
+and why the line is there. Deciding this decides what you measure.
 
 ## How they'll solve it
 The rough shape of the change, not the code. Roughly N lines across
@@ -202,7 +211,7 @@ By AI review:
 ## Config
 tech_stack:       Python, OpenAI SDK
 max_time:         90
-difficulty:       7/10
+difficulty:       3          # 1 easy, 2 medium, 3 hard
 ai_solvability:   medium, a model fixed 1 of 3 bugs cold
 recommended_sku:  small
 backend:          AI / PYTHON

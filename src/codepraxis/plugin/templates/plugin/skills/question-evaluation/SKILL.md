@@ -118,13 +118,18 @@ It is also one sample. Treat "passed 4 of 7" as a reading, not a constant.
 
 ## Difficulty comes from this, not from taste
 
-The spec's difficulty is 1–10, and when the candidate has AI it is the same
-question as *how well does a model do on this*. So derive it from the
+Difficulty is **1, 2 or 3** (easy, medium, hard), the scale the catalog filters
+on and the only one the platform stores. When the candidate has AI it is the
+same question as *how well does a model do on this*, so derive it from the
 simulation rather than inventing a number:
 
-- model passes most cases → low, 1–3
-- model passes some → middle, 4–7
-- model passes almost none → high, 8–10
+- model passes most cases → **1**, easy
+- model passes some → **2**, medium
+- model passes almost none → **3**, hard
+
+A finer scale reads as more precise and buys nothing: anything above 3 is
+rejected on publish, and questions authored on a 1–10 scale have already had to
+be collapsed back by hand.
 
 Adjust for volume and reading load, then say which way you adjusted and why.
 
@@ -139,7 +144,7 @@ Keep it short enough to read before approving.
 # Evaluation, <slug>
 
 **Verdict:** ready | not ready
-**Difficulty:** 7/10, a model passed 1 of 3 bugs cold
+**Difficulty:** 3 (hard), a model passed 1 of 3 bugs cold
 
 ## Blocking
 - The reference solution hardcodes the expected total, so the question is

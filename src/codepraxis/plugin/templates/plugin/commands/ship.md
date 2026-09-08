@@ -53,6 +53,60 @@ yours. Tell them the command and stop:
 codepraxis ship $1 --live
 ```
 
+## Write the catalog copy
+
+The hiring team never opens the pack. They decide whether to ask this question
+from two pieces of copy in the catalog, so both are part of shipping, not an
+afterthought. Write them into `challenges/$1/pack/publish.json`.
+
+**`description`, one or two sentences.** What the candidate does. It renders
+clamped to two lines in the question list, so keep it under about 220
+characters. The row already shows the title, difficulty, tech stack and
+duration, so do not spend it repeating them: "Implement a rate limiter in
+Python (Medium, 60 min)" says nothing the row is not already showing.
+
+**`description_sections`, the detail page.** A JSON object; every key optional,
+markdown bodies limited to headings, bold, bullets and inline code. Rendered in
+this order:
+
+- **`signal`** what the question actually measures.
+- **`task`** what the candidate spends the time doing.
+- **`starting_state`** what is given and what is missing.
+- **`implement`** the concrete deliverables, as a bullet list.
+- **`audience`** which roles it suits, what it assumes, where not to use it.
+- **`scoring`** optional; what the report will say.
+
+### The rule that matters most
+
+**`signal` has to read to someone who has never opened the question.** It names
+the capability under test, never the question's internals. You have just spent
+hours inside this pack, so the sentence you reach for first will almost always
+fail this.
+
+- Fails: "whether they notice the usage counter is not thread-safe" — the
+  reader has no idea there is a usage counter.
+- Passes: "whether they find a concurrency bug nobody told them to look for."
+
+Name the internals later, in `starting_state` and `implement`, once the earlier
+sections have established the setup.
+
+### Where the content comes from
+
+Most of it already exists by the time you ship, so do not invent it:
+
+- `signal` is the spec's signal sentence, rewritten to stand alone.
+- `task` is `pack/._course_data/feature.md`, condensed.
+- `starting_state` is the starting-state decision, what `pack/source/` contains
+  and what was deliberately left out.
+- `implement` is the case table read as scope rather than as tests.
+- `audience` is the one part nothing upstream produces. Write it from the role
+  the question is for, and be honest about where it does not belong, "do not
+  use for" is more useful to a recruiter than another line of praise.
+
+Write for a hiring manager and a recruiter reading side by side: the manager
+judges the technical substance, the recruiter needs to know it fits the role
+and the time. Say what the question is, not how good it is.
+
 ## Republishing a change
 
 If this question already has an id, pass it, otherwise you create a second copy
