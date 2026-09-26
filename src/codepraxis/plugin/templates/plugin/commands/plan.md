@@ -153,7 +153,7 @@ For an `interview` question, use this instead:
 ---
 question: <slug>
 type: interview
-mode: open-probe | draw-probe | mcq
+mode: open-probe | draw-probe       # mcq is not available yet
 duration: 15                        # minutes for the whole question
 seniority: senior
 topics: [<the competency it scores>, <others it touches>]

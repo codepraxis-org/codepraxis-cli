@@ -52,7 +52,10 @@ probe or a hint):
 - **Typing** in the chat (`open-probe`), which is the default.
 - **Drawing** on a whiteboard and explaining it (`draw-probe`), for design and
   architecture questions. You can give them a starting drawing to extend.
-- **Picking a choice** (`mcq`), for quick checks inside a longer interview.
+- **Picking a choice** (`mcq`) is **not available yet**: the interview does not
+  show the choices to the candidate. Don't write `mcq` questions. For a
+  multiple-choice knowledge check, add the questions to an MCQ question bank
+  and turn on the template's Knowledge check round instead.
 
 Mixing them works well: show a diagram in the opening question, then have them
 draw the fix in a probe. Video, audio and slide decks can't be used yet: export

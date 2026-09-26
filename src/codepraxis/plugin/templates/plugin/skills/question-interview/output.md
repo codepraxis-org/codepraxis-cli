@@ -84,7 +84,7 @@ can run.
 | Field | Candidate sees it | What it is |
 |---|---|---|
 | `name` | yes | A few words naming the subject, up to 80 characters |
-| `mode` | no | `open-probe`, `draw-probe` or `mcq` (below) |
+| `mode` | no | `open-probe` or `draw-probe` (below); `mcq` is not available yet |
 | `topics` | no | Ordered competencies; the first is the one the report scores |
 | `categories` | public only | Category slugs, the same list coding questions use (below) |
 | `seniority` | no | The level it's pitched at |
@@ -130,9 +130,9 @@ question sits beside the Oracle Integration Cloud coding questions.
 |---|---|
 | `open-probe` | Typing, in the chat |
 | `draw-probe` | Drawing on a whiteboard and explaining it in the chat |
-| `mcq` | Picking one of `mcq_choices` |
+| `mcq` | Not available yet: the interview doesn't show the choices. Use an MCQ question bank and the template's Knowledge check round |
 
-These are the only modes the interviewer can run.
+`open-probe` and `draw-probe` are the only modes the interviewer can run today.
 
 ## Entities
 
