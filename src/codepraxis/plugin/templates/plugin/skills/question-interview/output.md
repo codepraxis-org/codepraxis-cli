@@ -120,7 +120,7 @@ question sits beside the Oracle Integration Cloud coding questions.
   other company's questions ignore them.
 - Sending `categories` replaces the question's categories. An unknown slug is
   skipped; a new public question with none that exist goes to `misc`.
-  Categories are never created by publishing.
+  Categories are never created by pushing.
 - `categories` is not `topics`. A topic is the skill the question is scored on;
   a category is where it is filed.
 
@@ -162,8 +162,8 @@ refer to entities by their file name in `entities/`; `push` swaps in the ids.
 
 ## The check
 
-`codepraxis test` runs the full check. Fix every **blocker** before you
-publish: the website's Publish button only refuses unreadable entities, so this
+`codepraxis test` runs the full check. Fix every **blocker** before the
+question is published: the website's Publish button only refuses unreadable entities, so this
 is the only place the rest are caught. Fix warnings unless you have a reason.
 
 Blockers:

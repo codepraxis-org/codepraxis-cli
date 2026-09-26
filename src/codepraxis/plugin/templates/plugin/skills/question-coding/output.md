@@ -107,17 +107,17 @@ The question's catalog entry. Write it in the build step, from `spec.md`.
 | `description_sections` | yes | The five sections the question page shows, all five, in markdown. Written for the hiring company, not the candidate |
 | `challenge_id` | added by the CLI | Written back after the first push; keep it, so the next push updates this question instead of creating a duplicate |
 
-**Where the question appears** depends on the account that publishes it:
+**Where the question appears** depends on the account whose API key pushes it:
 
-- **The admin account** publishes to the public catalog, verified, in the
+- **The admin account** pushes to the public catalog, verified, in the
   categories named in `categories`.
-- **Any other company's account** publishes into that company's own questions.
+- **Any other company's account** pushes into that company's own questions.
   `categories` is ignored.
 
 **Choosing categories.** Get the current list with `codepraxis categories`
 (it calls `GET /api/public/categories`) and use the slugs of the ones that fit.
 If none fits, use `misc`. An unknown slug is skipped, and a question with no
-valid category goes to `misc`; categories are never created by publishing.
+valid category goes to `misc`; categories are never created by pushing.
 
 **Drafts.** A question pushed for the first time is a draft. A draft can be
 previewed, but not assigned or added to a template. The author publishes it

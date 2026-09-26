@@ -141,6 +141,9 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
     progress.line(f"  {opened.get('container_url') or opened['base_url']}")
     container = Container(opened["base_url"], folder)
     wait_for_setup(container)
+    # A container that already had this version keeps its files, and a draft's
+    # version id doesn't change when it is re-pushed; make it match local files.
+    send_changes(q, container)
     return Session(container, int(opened["challenge_version_id"]))
 
 

@@ -38,6 +38,10 @@ ordinary candidate container, so what works there works for candidates.
    website does, and waits for `setup.sh`. A cold start can take a few
    minutes; `setup.sh` itself must finish within 2 minutes, or launch stops
    with its last lines. It prints the container's URL: the candidate's view.
+   It then sends any local files that differ, so the container always matches
+   your question (a re-pushed draft keeps its version id, and a container that
+   already had the question, or restored your earlier workspace, keeps its
+   files).
 4. **Try it:** `codepraxis exec $1 "<command>"` runs a command in the
    workspace as the candidate user (`--timeout 600` for slow ones). Use it to
    run the starter, query a database, check a file.

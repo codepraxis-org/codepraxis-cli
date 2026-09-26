@@ -101,7 +101,7 @@ everything needed to build the question without asking again.
 For every question type, pick `categories` from the list `codepraxis
 categories` prints; if none fits, use `misc`. Coding and interview questions
 share the same categories. Categories only matter when the admin account
-publishes.
+pushes.
 
 ```markdown
 ---

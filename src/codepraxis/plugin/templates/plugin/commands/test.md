@@ -18,7 +18,9 @@ codepraxis test $1
 ```
 
 `launch --fresh` hands back the old container and loads the pushed question in
-a new one, so `setup.sh` runs from scratch (and must finish in 2 minutes).
+a new one, so `setup.sh` runs from scratch (and must finish in 2 minutes). If
+the platform restores your earlier workspace into it, `launch` puts the
+question's files back before `test` runs.
 `test` then runs the candidate's Submit twice:
 
 1. **Starter:** the workspace as a candidate gets it. Every **hidden** case must

@@ -24,7 +24,8 @@ from pathlib import Path
 from .errors import PraxisError
 
 STATE_FILE = ".codepraxis.json"
-IGNORED_NAMES = frozenset({"__pycache__", ".DS_Store", ".git", ".pytest_cache"})
+# .vscode is the candidate editor's own, created in the workspace; never the question's.
+IGNORED_NAMES = frozenset({"__pycache__", ".DS_Store", ".git", ".pytest_cache", ".vscode"})
 IGNORED_SUFFIXES = (".pyc",)
 
 
