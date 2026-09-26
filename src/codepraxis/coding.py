@@ -87,7 +87,10 @@ def base_repository(q: Question, work: Path) -> dict:
         "GIT_AUTHOR_NAME": name, "GIT_AUTHOR_EMAIL": email, "GIT_AUTHOR_DATE": BASE_COMMIT_DATE,
         "GIT_COMMITTER_NAME": name, "GIT_COMMITTER_EMAIL": email, "GIT_COMMITTER_DATE": BASE_COMMIT_DATE,
     }
-    isolated = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "init.templateDir="]
+    # No background maintenance or gc: newer git starts it after a commit, and its
+    # lock files come and go while the .git is being zipped.
+    isolated = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "init.templateDir=",
+                "-c", "maintenance.auto=false", "-c", "gc.auto=0"]
 
     def git(*args: str) -> None:
         try:
@@ -103,7 +106,8 @@ def base_repository(q: Question, work: Path) -> dict:
     git("add", "-A")
     git("commit", "-q", "--allow-empty", "-m", BASE_COMMIT_MESSAGE)
     git_dir = tree / ".git"
-    return {p.relative_to(git_dir).as_posix(): p for p in sorted(git_dir.rglob("*")) if p.is_file()}
+    return {p.relative_to(git_dir).as_posix(): p for p in sorted(git_dir.rglob("*"))
+            if p.is_file() and not p.name.endswith(".lock")}
 
 
 def _add(archive: zipfile.ZipFile, name: str, disk: Path) -> None:
