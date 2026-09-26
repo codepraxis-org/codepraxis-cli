@@ -152,6 +152,24 @@ from the question's page on the website.
   not Microsoft's. Install them with a pinned version:
   `code-server --install-extension <publisher>.<name>@<version>`.
 
+## Questions with a database (Oracle)
+
+Each candidate gets their own Oracle schema; no login is ever shipped in the
+pack. Copy the pattern from `question-bank/challenges/ebs_ap_invoice_interface_rerun`:
+
+- `source/db/`: `connection.json` (dsn, wallet dir and wallet password only),
+  the wallet, `schema.sql`, `seed.sql`, and `provision.py`.
+- `setup.sh`, after installing `oracledb==2.5.1 cryptography==43.0.3`, runs
+  `db/provision.py` for the candidate's run only (`if [ "$(id -u)" -ne 0 ]`),
+  after waiting for the workspace to be copied in. It asks the platform for a
+  schema (`POST /api/misc/oracle-schema`), keeps the login in
+  `~/.config/codepraxis/<folder>.json` (outside the workspace), and installs
+  the tables with `run.py reset --schema`. It reuses the schema while its login
+  works; schemas are removed three hours after creation.
+- `run.py` and the grader's `oradb.py` read the login from that file; the
+  grader calls `oradb.use_workspace(self.userWxpace)` before connecting.
+- Seed with one PL/SQL block (one round trip), and reset per case.
+
 ## feature.md: the problem statement
 
 `._course_data/feature.md` is what the candidate reads, in the Instructions
