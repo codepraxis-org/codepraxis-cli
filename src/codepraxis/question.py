@@ -25,7 +25,8 @@ from .errors import PraxisError
 
 STATE_FILE = ".codepraxis.json"
 # .vscode is the candidate editor's own, created in the workspace; never the question's.
-IGNORED_NAMES = frozenset({"__pycache__", ".DS_Store", ".git", ".pytest_cache", ".vscode"})
+# ._git is the base repository push generates for source/; never kept on disk.
+IGNORED_NAMES = frozenset({"__pycache__", ".DS_Store", ".git", "._git", ".pytest_cache", ".vscode"})
 IGNORED_SUFFIXES = (".pyc",)
 
 

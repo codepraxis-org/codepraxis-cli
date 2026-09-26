@@ -47,6 +47,14 @@ What the candidate sees. Everything in `source/` is copied as it is into their
 workspace when the container opens. Keep it to what the question needs: the
 starting code, data and tools, and a `README.md`.
 
+**Git.** The candidate's progress is saved only as git history, so their
+workspace starts as a repository with one base commit of `source/`. You don't
+create it: `codepraxis push` builds it (branch `main`, author `CodeGuru
+<guru@codepraxis.com>`, "Setting up the test environment") and ships it as
+`source/._git`, which the container turns into `.git`. Don't put a `.git` of
+your own in `source/`; it is ignored, so your history never reaches a
+candidate.
+
 ## ._tests/
 
 The grader. Keep it flat: `test_1.py` and any files it needs sit directly in

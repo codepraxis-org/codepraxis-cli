@@ -31,16 +31,79 @@ SETUP_LIMIT_SECONDS = 120
 # ── push and pull ───────────────────────────────────────────────────────
 
 
+#: The base commit every candidate's workspace starts from. Progress is saved
+#: as git history on top of it, so a workspace without one saves nothing.
+BASE_COMMIT_AUTHOR = ("CodeGuru", "guru@codepraxis.com")
+BASE_COMMIT_MESSAGE = "Setting up the test environment"
+#: Fixed, so the same files always give the same commit.
+BASE_COMMIT_DATE = "2026-01-01T00:00:00+0000"
+
+
 def bundle(q: Question) -> bytes:
-    """``pack/<folder>/...`` plus ``solution/...``, the layout the backend takes."""
+    """``pack/<folder>/...`` plus ``solution/...``, the layout the backend takes.
+
+    ``source/._git`` is added: a fresh repository with one commit of ``source/``.
+    The container renames it to ``.git`` when it serves the question (unless the
+    candidate has saved history of their own). Any ``.git`` the author keeps in
+    ``source/`` is ignored, so their history never reaches a candidate.
+    """
+    import tempfile
+
     folder = q.folder_name()
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+    with tempfile.TemporaryDirectory(prefix="codepraxis-base-") as work, \
+            zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for rel, local in q.pack_files().items():
             _add(archive, f"pack/{folder}/{rel}", local.disk)
+        for rel, disk in base_repository(q, Path(work)).items():
+            _add(archive, f"pack/{folder}/source/._git/{rel}", disk)
         for rel, local in q.solution_files().items():
             _add(archive, f"solution/{rel[len('source/'):]}", local.disk)
     return buffer.getvalue()
+
+
+def base_repository(q: Question, work: Path) -> dict:
+    """The ``.git`` of a one-commit repository of ``source/``: {path inside .git: file}.
+
+    Built under ``work`` with the git CLI, isolated from the author's own git
+    configuration and hooks.
+    """
+    import os
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None:
+        raise PraxisError("git is not installed; push needs it to build the base commit for source/.")
+    tree = work / "source"
+    for rel, local in q.pack_files().items():
+        if rel.startswith("source/"):
+            target = tree / rel[len("source/"):]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(local.disk, target)
+    tree.mkdir(exist_ok=True)
+    name, email = BASE_COMMIT_AUTHOR
+    env = {
+        "PATH": os.environ.get("PATH", ""), "HOME": str(work), "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": name, "GIT_AUTHOR_EMAIL": email, "GIT_AUTHOR_DATE": BASE_COMMIT_DATE,
+        "GIT_COMMITTER_NAME": name, "GIT_COMMITTER_EMAIL": email, "GIT_COMMITTER_DATE": BASE_COMMIT_DATE,
+    }
+    isolated = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "init.templateDir="]
+
+    def git(*args: str) -> None:
+        try:
+            subprocess.run(["git", *isolated, *args], cwd=tree, env=env, check=True,
+                           capture_output=True, timeout=60)
+        except subprocess.CalledProcessError as exc:
+            raise PraxisError(f"git {args[0]} failed building the base commit: "
+                              f"{exc.stderr.decode(errors='replace').strip()}") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise PraxisError(f"git {args[0]} took over 60s building the base commit.") from exc
+
+    git("init", "-q", "-b", "main")
+    git("add", "-A")
+    git("commit", "-q", "--allow-empty", "-m", BASE_COMMIT_MESSAGE)
+    git_dir = tree / ".git"
+    return {p.relative_to(git_dir).as_posix(): p for p in sorted(git_dir.rglob("*")) if p.is_file()}
 
 
 def _add(archive: zipfile.ZipFile, name: str, disk: Path) -> None:
@@ -91,7 +154,10 @@ def pull(backend: Backend, challenge_id: int, into: Path) -> Question:
             if name.endswith("/"):
                 continue
             if name.startswith(f"pack/{folder}/"):
-                target = root / "pack" / name[len(f"pack/{folder}/"):]
+                rel = name[len(f"pack/{folder}/"):]
+                if ignored(rel):  # the generated base repository is rebuilt on push
+                    continue
+                target = root / "pack" / rel
             elif name.startswith("solution/"):
                 target = root / "solution" / name[len("solution/"):]
                 solution += 1

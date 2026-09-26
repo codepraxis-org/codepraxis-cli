@@ -378,3 +378,37 @@ class TestASubmitThatWasCutOff:
         with pytest.raises(HttpError):
             coding.submit(container, 7, "solution")
 
+
+class TestTheBaseCommit:
+    def test_the_bundle_ships_a_one_commit_repository_of_source(self, tmp_path):
+        import subprocess
+
+        q = _coding_question(tmp_path)
+        (q.pack / "source" / ".git").mkdir()
+        (q.pack / "source" / ".git" / "HEAD").write_text("the author's own history")
+        archive = zipfile.ZipFile(io.BytesIO(coding.bundle(q)))
+        names = archive.namelist()
+        assert "pack/invoice_rerun/source/._git/HEAD" in names
+        assert not any("/source/.git/" in n for n in names)  # the author's .git never ships
+
+        out = tmp_path / "out"
+        for n in names:
+            if n.startswith("pack/invoice_rerun/source/._git/"):
+                target = out / ".git" / n[len("pack/invoice_rerun/source/._git/"):]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(archive.read(n))
+        log = subprocess.run(["git", "--git-dir", str(out / ".git"), "log", "--format=%an <%ae>|%s|%D"],
+                             capture_output=True, text=True, check=True).stdout.strip().splitlines()
+        assert log == ["CodeGuru <guru@codepraxis.com>|Setting up the test environment|HEAD -> main"]
+        files = subprocess.run(["git", "--git-dir", str(out / ".git"), "ls-tree", "-r", "--name-only", "HEAD"],
+                               capture_output=True, text=True, check=True).stdout.split()
+        assert files == ["main.py"]
+
+    def test_the_same_files_give_the_same_commit(self, tmp_path):
+        q = _coding_question(tmp_path)
+        (tmp_path / "a").mkdir()
+        (tmp_path / "b").mkdir()
+        first = {k for k in coding.base_repository(q, tmp_path / "a") if k.startswith("objects/")}
+        second = {k for k in coding.base_repository(q, tmp_path / "b") if k.startswith("objects/")}
+        assert first == second
+
