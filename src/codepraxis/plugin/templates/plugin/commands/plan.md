@@ -1,240 +1,195 @@
 ---
-description: Design a CodePraxis question, talk it through, find real code, write the plan
-argument-hint: "<what you want to test, or a repo>"
-allowed-tools: Read, Glob, Grep, WebFetch, Write, Task, Bash(codepraxis:*), Bash(git clone:*)
+description: Plan an assessment question for a position and write its spec.md
+argument-hint: "<which position are you hiring for?>"
+allowed-tools: Read, Glob, Grep, WebFetch, Write, Bash(git clone:*), Bash(codepraxis categories:*)
 ---
 
-Design a question for: **$ARGUMENTS**
+Plan an assessment question for: **$ARGUMENTS**
 
-**You are not building anything here.** No pack, no tests, no source files. The
-only file you may write is `spec.md`. Building happens later, in a separate
-command, after a human approves what you write.
+You write one file, `challenges/<slug>/spec.md`. You do not build anything here.
 
-The `question-design` skill covers what makes a question worth asking. Read it
-rather than re-deriving it. This file is the procedure.
+## 1. Get the basics
 
-## Step 1, Talk first
+Ask for these together, in one message. Skip any the conversation already
+answers, and don't design anything until you have all of them.
 
-Nothing can be searched until you know what to search for. The answers here
-*become* the search query.
+1. **Position name.** The role they're hiring for.
+2. **Job description.** Ask them to paste it.
+3. **Time.** How many minutes the candidate gets for this question.
+4. **Question kind.** One of:
+   - a coding question **without** AI (the candidate works alone),
+   - a coding question **with** AI (the candidate has the AI agent),
+   - an **AI interview** question (a conversation, no coding environment).
 
-Establish:
+If they aren't sure which kind fits, recommend one from the job description in
+one or two sentences and let them choose.
 
-- **The role and the stack.** "AI engineer, Python, LangChain" is a search.
-  "Someone good" is not.
-- **What good looks like** the signal. Asking about *people* gets a real
-  answer where asking about skills gets a list: what a strong hire did that a
-  weak one couldn't. But that is a technique, not a script. Ask it in your own
-  words, once, and only if you actually need it.
+## 2. Read the skill for that kind
 
-  **Skip it entirely when the signal is already there.** "assess embedded
-  engineers for an NPU role" plus "C, memory management, pthreads" is a signal.
-  Asking the set-piece question on top of that reads as a form to fill in, and
-  the answer you get back will just repeat what they already told you.
-- **How long the assessment runs**, and roughly where that time goes. Just ask.
-  Do not derive it. They know their own process.
-- **Do they have a repository?**
+| Question kind | `type:` in the spec | Skill to read now |
+|---|---|---|
+| Coding without AI | `coding` | `question-coding` |
+| Coding with AI | `coding-ai` | `question-coding-ai` |
+| AI interview | `interview` | `question-interview` |
 
-If they are vague, do not interrogate. Propose two or three concrete
-directions from their domain and let them reject the wrong ones. Most people
-cannot specify, but everyone can react.
+The skill for the question type they chose says what a good question of that
+type looks like and the rules it must follow. Everything you propose from here on must fit it.
 
-## Step 2, Get real code
+## 3. Ask where the question comes from
 
-**A question built on a real repository is hard to game**, because the model
-has never seen that code. Push for this.
+Ask which of these they want:
 
-**They have one**, best case. Before anything else, show the exact file list
-that would leave their company. The code goes into a container the candidate
-controls; that is the only irreversible step in this flow. Strip credentials,
-`.env` files, internal hostnames and customer data, and get confirmation.
+1. **"I have a question in mind."** They describe it, even briefly.
+2. **"Make a question from a repository."** They give a repository (theirs or any other) to build the question on.
+3. **"Create one for me."** You propose questions from the job description.
 
-**They don't**, find one:
+### 3a. They have a question in mind
 
-```bash
-codepraxis find-repos "<topic>" --language <lang> --json
-```
+Based on the question kind they chose, use that kind's skill: it says what a
+good question looks like. Brainstorm with them until you find the right
+question together. Take their idea and reframe it in that structure: the
+question, what it assesses, what the candidate starts with, and how it's
+checked.
 
-Licences are already filtered to ones we may redistribute, and results are
-sampled rather than ranked.
+Be creative: alongside their idea, offer a few related variations, such as the
+same question with an added twist (a failure mid-run, messy data, a rule the
+candidate must notice). Present their reframed idea and the variations, saying
+plainly what you changed and why, and let them pick.
 
-**Show them the shortlist and let them pick.** Three or four, each with enough
-to judge it on, what it is, its size, and the seam you would build on. Say
-which you would choose and why, then **stop and wait**.
+### 3b. Make a question from a repository
 
-```
-1. Isty001/mem-pool  · MIT · ~1,060 lines C
-   Fixed/variable-size pool allocator. Free lists guarded by one
-   pthread_mutex_t. Seam: pool_fixed_alloc in src/fixed.c, ~100 lines.
+Read enough of it to understand the architecture, then read one or two modules
+in depth. Find the seams: self-contained places a candidate can work inside.
+Propose **up to three** questions on it, each fitting the skill for the
+question type they chose. Fewer is fine if the repository doesn't support three
+good ones.
 
-2. mlyszczek/librb  · BSD-3 · ~2,400 lines C
-   Thread-aware ring buffer. Single file, so less room for a feature
-   with more than one decision in it.
+Before anything leaves their machine, list the exact files the candidate would
+get (for an interview, the files they're shown) and strip credentials, `.env` files, internal
+hostnames and customer data. Confirm the list with them.
 
-3. johnosullivan/esp32-iridium-modem  · MIT · ~5,900 lines C
-   Genuinely embedded firmware, but the seam is buried in AT-command
-   parsing rather than concurrency.
+### 3c. You create the question
 
-I'd pick 1, the locking is real rather than decorative. Which do you
-want?
-```
+You create everything yourself. Understand the job description: what this
+person actually does on a normal day and on a bad one. From that, propose **up
+to three** questions, each fitting the skill for the question type they chose.
 
-Do not pick for them and move on. The repository decides what the question can
-possibly be about, and they know their hiring bar; presenting a choice as
-already-made is the fastest way to build the wrong question convincingly.
+For the one they pick, you will write the material yourself. For a coding
+question that is a codebase: realistic code, data and tooling from the world
+of this job, into which the question's defects or missing pieces are then
+placed. For an interview question it is what the candidate is shown: code, a
+diagram, a document or a ticket. The skill for the question type says how big
+it should be and how it's structured. It must read like a real team's work,
+never generic filler.
 
-If a search comes back thin, say so and search again with different words
-rather than settling for the best of a bad set.
+For every option you propose (3a, 3b or 3c), give:
 
-**They insist on inventing one**, allowed, but only when they ask for it
-explicitly. Never the default. Say what they are giving up: a model has seen
-every public tutorial, so an invented question starts out easier to game.
+- **Title:** one line.
+- **The question:** what it is, in two or three sentences.
+- **What it assesses:** the skills from the job description it tests.
+- **What the candidate starts with:** the files, data or setup they're given.
+  For an interview: what they're shown, and how they answer (typing, drawing
+  or picking a choice).
 
-## Step 3, Read it, then offer a menu
+Recommend one, and let them pick.
 
-**Understand the architecture fully; read one or two candidate modules
-deeply.** Not the whole repository. That is slow and mostly wasted.
+## 4. Write the spec
 
-The question you are answering: **is there a seam?** A self-contained module
-with a clear interface a candidate can work inside. If there is not, say so and
-move to the next repository rather than forcing a question out of this one.
+Once they've picked, write `challenges/<slug>/spec.md`. It must contain
+everything needed to build the question without asking again.
 
-Then offer a short menu, each option rated:
-
-```
-A. Retry + validation on tool dispatch
-   3 design decisions · ~80 lines · hard to game (3, hard)
-B. Add a second tool with routing
-   2 design decisions · ~50 lines · medium (2, medium)
-C. Cache the embedding step
-   1 design decision · ~30 lines · easy to game (1, easy)
-
-I'd pick A. C is a one-liner a model writes instantly.
-```
-
-Be hard on the ratings, the assessment has to survive a candidate with an
-agent. Aim for **one or two features**, not a project.
-
-Check the chosen feature against the duration from step 1. If ~80 lines and
-three design decisions do not fit, cut scope and say so.
-
-### Check it can actually be graded
-
-Confirm each thing being assessed lands in one of the runner's four modes, 
-`pack-contract` has the details:
-
-- **Behaviour** → override 1, which is unrestricted Python. It can start a
-  service and call it, import their module, inspect database state, or time a
-  repeated call to prove caching. Do not limit yourself to stdin→stdout
-  shapes; real repositories are libraries and services.
-- **A fixed simple output** → override 0, but only when the string is exact.
-- **A design decision** → override 2, AI review.
-
-Also: what does setup cost on *every* container load, and do the visible cases
-finish in seconds? They are the candidate's only feedback loop.
-
-### Consider asking for a written design
-
-For senior questions, where the reasoning matters more than the diff, have the
-candidate write a short `design.md` and review it **together with their code**:
-*does the implementation do what the document claims?* That catches someone who
-describes one design and builds another, which neither file reveals alone.
-
-If you do this, the brief must name the exact filename and ask for any diagram
-in text, mermaid or ASCII. An image cannot be graded.
-
-## Step 4, Sanity-check it yourself, in seconds
-
-Planning is a conversation and must stay at conversation speed.
-
-**Do not run the simulation here.** Do not dispatch a subagent, do not start
-background work, do not make them wait. The measurement belongs in
-`/codepraxis:build`, where a pack exists and the attempt can be scored by the
-real tests instead of guessed at, and where the author is already waiting for
-a build rather than sitting in a design discussion.
-
-What you can do in a few seconds, from your own reading:
-
-- Would the brief alone be enough for a model? If yes, say which property makes
-  it trivial and fix it now, bury a fact it cannot guess, or move the task from
-  authoring to debugging.
-- Do the cases separate different failures, or the same one twice?
-- Does the scope fit the duration they gave?
-
-Say what you found in a line or two. Then write the spec. Build will produce
-the real number and correct your estimate if you were wrong. That is what it
-is for.
-
-## Step 5, Write the plan
-
-Write `challenges/<slug>/spec.md`. Nothing else.
-
-**Keep it short.** A hiring manager should understand what this is and how it
-will be judged in about two minutes. Everything in it earns its place.
+For every question type, pick `categories` from the list `codepraxis
+categories` prints; if none fits, use `misc`. Coding and interview questions
+share the same categories. Categories only matter when the admin account
+publishes.
 
 ```markdown
 ---
-question: agent-hardening
-status: draft
-repo: github.com/owner/name @ a1b2c3d
-license: MIT
+question: <slug>
+type: coding | coding-ai | interview
+max_time: 40
+ai_enabled: false
+difficulty: 2                       # 1 easy, 2 medium, 3 hard
+tech_stack: [Oracle PL/SQL, SQL]
+repo: github.com/owner/name @ <sha> # or: invented
+position: <position name>
+categories: [<existing category slug>]
 ---
 
-# Harden a tool-calling agent
+# <Title>
 
 ## Signal
-The one falsifiable sentence: what this measures. Written so it reads
-to someone who has never opened the question, name the capability,
-never the internals. This becomes the catalog copy at ship time.
+<one falsifiable sentence: what a strong candidate does that a weak one doesn't>
 
 ## The problem
-What this repo is, in two sentences. Then what breaks, and what they
-must make survive it.
+<the situation in the candidate's world>
 
 ## Starting state
-What `source/` already contains and what was deliberately left out,
-and why the line is there. Deciding this decides what you measure.
+<every file or table the candidate gets, and what is broken or missing in it>
 
-## How they'll solve it
-The rough shape of the change, not the code. Roughly N lines across
-M files, and whether new dependencies are needed.
+## Solution
+<what the reference solution does; for a debug question, each planted defect
+and its fix>
 
-## How we'll check it
-
+## How we check it
 By running their code:
-1. An unknown tool returns an error, not a silent skip
-2. Malformed JSON triggers a retry, then fails cleanly
+1. <case> — visible
+2. <case> — hidden: <what it catches>
 
-By AI review:
-3. Whether the retry strategy is deliberate or incidental
+By AI review:                       # only when needed
+3. <decision the reviewer checks, and its checklist>
 
-## Config
-tech_stack:       Python, OpenAI SDK
-max_time:         90
-difficulty:       3          # 1 easy, 2 medium, 3 hard
-ai_solvability:   medium, a model fixed 1 of 3 bugs cold
-recommended_sku:  small
-backend:          AI / PYTHON
+## Environment
+<setup.sh needs, external services such as a database, data to seed>
+
+## Brief outline
+<the headings the candidate's instructions will have, and the exact contract
+they must state>
 ```
 
-Two rules for that file:
+For an `interview` question, use this instead:
 
-**Never write "override 2" in a spec.** The reader has not seen the runner.
-"By running their code" and "By AI review" are the only two categories they
-need; build maps each line to a mode.
+```markdown
+---
+question: <slug>
+type: interview
+mode: open-probe | draw-probe | mcq
+duration: 15                        # minutes for the whole question
+seniority: senior
+topics: [<the competency it scores>, <others it touches>]
+categories: [<existing category slug>]
+repo: github.com/owner/name @ <sha> # or: invented
+position: <position name>
+---
 
-**Config maps to real platform fields**, so build and ship fill them without
-guessing. Difficulty comes from the evaluation, not from taste.
+# <Title>
 
-## Then stop
+## Signal
+<one falsifiable sentence: what a strong candidate does that a weak one doesn't>
 
-Post a summary. Point them at `spec.md` and `evaluation.md`. The next step is
-theirs:
+## What they're shown
+<each file, and when: with the opening question, with a probe, or with a hint>
 
+## Opening question
+<the situation, exactly as the candidate reads it>
+
+## Answer key
+Must reach: <each concept>
+Red flags: <each one>
+Good extras: <each one>
+Never say: <the phrases that would give it away>
+
+## Probes
+1. <build | debug | lead> — <what it asks>; good answer: <…>; hint: <…>; <minutes>
+   1.1 <the follow-up one level deeper> …
+
+## Timing
+<minutes for the opening question, and for each probe>
 ```
-codepraxis approve <slug>     then  /codepraxis:build
-```
 
-Do not build. Do not offer to build. If they want changes, revise and re-post, 
-and approval means that command has been run, not that someone said "looks
-good" in chat.
+Never write runner vocabulary ("override 2") in the spec; say "By running their
+code" or "By AI review".
+
+## 5. Hand off
+
+Say what you planned in two lines, then: `/codepraxis:build <slug>`.
