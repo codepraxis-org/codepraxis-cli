@@ -59,7 +59,7 @@ jobs:
           python -m venv /tmp/smoke
           /tmp/smoke/bin/pip install --quiet dist/*.whl
           /tmp/smoke/bin/codepraxis --version
-          /tmp/smoke/bin/codepraxis validate --help > /dev/null
+          /tmp/smoke/bin/codepraxis push --help > /dev/null
 
       - name: Confirm the tag matches the package version
         # A tag that disagrees with __version__ publishes something nobody
