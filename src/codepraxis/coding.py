@@ -1,9 +1,12 @@
-"""Building a coding question in a real container.
+"""Coding questions: push to the platform, pull back, launch in a container, test there.
 
-The question is saved as a draft once, so the platform can load it, then opened
-in the API key owner's container the way the website opens a question: the
-normal setup runs, ``setup.sh`` included. After that, every change is a file
-sync, and Run and Submit are the candidate's own.
+``push``    local question -> platform (Azure Blob + database), as a draft. A
+            draft keeps one version; a published question gets a new version.
+``pull``    platform -> local, solution included.
+``launch``  the pushed question in the API key owner's container, loaded the
+            way the website loads it, so setup.sh runs as for a candidate.
+``exec`` and ``test`` first send the files that changed locally to the launched
+container, so an edit is tried in seconds without pushing.
 """
 
 from __future__ import annotations
@@ -11,47 +14,36 @@ from __future__ import annotations
 import io
 import re
 import stat
-import sys
 import time
 import zipfile
 from dataclasses import dataclass
+from pathlib import Path
 
+from . import progress
 from .errors import PraxisError
 from .platform import Backend, Container, NotFound, Unreachable, website_url
 from .question import Question, ignored, sha256
 
-SETUP_WAIT_SECONDS = 15 * 60
+#: setup.sh must finish within this. It runs on every candidate's container load.
+SETUP_LIMIT_SECONDS = 120
 
 
-def say(message: str = "") -> None:
-    print(message, flush=True)
+# ── push and pull ───────────────────────────────────────────────────────
 
 
-def note(message: str) -> None:
-    print(message, file=sys.stderr, flush=True)
-
-
-# ── the draft ───────────────────────────────────────────────────────────
-
-
-def bundle(q: Question, with_solution: bool = True) -> bytes:
-    """``pack/<folder>/...`` plus ``solution/...``, the layout the backend takes.
-
-    The backend stores the pack without the solution; the solution only travels
-    so a later runner-validated publish has it.
-    """
+def bundle(q: Question) -> bytes:
+    """``pack/<folder>/...`` plus ``solution/...``, the layout the backend takes."""
     folder = q.folder_name()
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for rel, local in q.pack_files().items():
             _add(archive, f"pack/{folder}/{rel}", local.disk)
-        if with_solution:
-            for rel, local in q.solution_files().items():
-                _add(archive, f"solution/{rel[len('source/'):]}", local.disk)
+        for rel, local in q.solution_files().items():
+            _add(archive, f"solution/{rel[len('source/'):]}", local.disk)
     return buffer.getvalue()
 
 
-def _add(archive: zipfile.ZipFile, name: str, disk) -> None:
+def _add(archive: zipfile.ZipFile, name: str, disk: Path) -> None:
     info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
     info.compress_type = zipfile.ZIP_DEFLATED
     executable = disk.stat().st_mode & stat.S_IXUSR
@@ -59,18 +51,59 @@ def _add(archive: zipfile.ZipFile, name: str, disk) -> None:
     archive.writestr(info, disk.read_bytes())
 
 
-def save_draft(q: Question, backend: Backend) -> dict:
-    """Upload the pack as a draft: a new question, or a new version of this one."""
+def dashboard_link(challenge_id) -> str:
+    return f"{website_url()}/company/challenges/{challenge_id}"
+
+
+def push(q: Question, backend: Backend) -> dict:
+    """Save the question to the platform. Never changes whether it is live."""
     challenge_id = q.read_publish().get("challenge_id")
     path = "/challenges/direct?status=draft" + (f"&challenge_id={challenge_id}" if challenge_id else "")
-    result = backend.post_zip(path, bundle(q))
-    if result.get("challenge_id"):
-        q.remember_challenge_id(int(result["challenge_id"]))
+    files = len(q.pack_files())
+    with progress.step(f"Pushing {q.slug} ({files} files, solution kept private)") as s:
+        result = backend.post_zip(path, bundle(q))
+        if result.get("challenge_id"):
+            q.remember_challenge_id(int(result["challenge_id"]))
+        if result.get("created"):
+            s.result(f"Created as a draft: challenge {result['challenge_id']}")
+        elif result.get("version_reused"):
+            s.result(f"Draft updated (same version {result['challenge_version_id']})")
+        else:
+            s.result(f"New version {result['challenge_version_id']} saved")
+    if result.get("status") == "published" and not result.get("version_reused"):
+        progress.warn("This question is live: candidates get this new version from now on.")
+    if result.get("categories"):
+        progress.line(f"  categories: {', '.join(result['categories'])}")
+    progress.line(f"  {dashboard_link(result.get('challenge_id'))}")
     return result
 
 
-def dashboard_link(challenge_id) -> str:
-    return f"{website_url()}/company/challenges/{challenge_id}"
+def pull(backend: Backend, challenge_id: int, into: Path) -> Question:
+    """Write the pushed question into ``into`` (``challenges/<folder>/``, created if needed)."""
+    with progress.step(f"Pulling challenge {challenge_id}") as s:
+        blob = backend.get_bytes(f"/challenges/{challenge_id}/files")
+        archive = zipfile.ZipFile(io.BytesIO(blob))
+        pack_names = [n for n in archive.namelist() if n.startswith("pack/")]
+        folder = pack_names[0].split("/")[1] if pack_names else str(challenge_id)
+        root = into if into.name == folder or (into / "pack").is_dir() else into / folder
+        written = solution = 0
+        for name in archive.namelist():
+            if name.endswith("/"):
+                continue
+            if name.startswith(f"pack/{folder}/"):
+                target = root / "pack" / name[len(f"pack/{folder}/"):]
+            elif name.startswith("solution/"):
+                target = root / "solution" / name[len("solution/"):]
+                solution += 1
+            else:
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.read(name))
+            written += 1
+        q = Question(root)
+        q.remember_challenge_id(int(challenge_id))
+        s.result(f"Pulled {written} files into {root}" + ("" if solution else " (no solution was stored)"))
+    return q
 
 
 # ── the container ───────────────────────────────────────────────────────
@@ -80,72 +113,100 @@ def dashboard_link(challenge_id) -> str:
 class Session:
     container: Container
     challenge_version_id: int
-    opened_now: bool
 
 
-def open_container(q: Question, backend: Backend, *, reuse: bool = True) -> Session:
-    """The container this question is open in, opening it if needed.
-
-    Reused while it answers. The pool reclaims one after 30 idle minutes, and a
-    reclaimed container simply gets reopened here.
-    """
-    state = q.state()
-    if reuse and state.get("base_url") and state.get("folder"):
-        container = Container(state["base_url"], state["folder"])
-        try:
-            container.status()
-            return Session(container, int(state["challenge_version_id"]), opened_now=False)
-        except (NotFound, Unreachable):
-            note("The container this question was open in has gone; opening a new one.")
-
-    challenge_id = q.read_publish().get("challenge_id") or state.get("challenge_id")
+def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
+    """Open the pushed question in the key owner's container and wait for setup.sh."""
+    challenge_id = q.read_publish().get("challenge_id")
     if not challenge_id:
-        say("Saving the question as a draft so the platform can load it…")
-        challenge_id = save_draft(q, backend)["challenge_id"]
-        say(f"  draft: {dashboard_link(challenge_id)}")
+        raise PraxisError(f"'{q.slug}' hasn't been pushed yet. Run `codepraxis push {q.slug}` first.")
+    if fresh:
+        with progress.step("Handing the old container back"):
+            backend.delete("/container")
+        q.save_state(base_url=None, folder=None)
 
-    say("Opening it in a container (a cold start can take a few minutes)…")
-    opened = backend.open_challenge(int(challenge_id))
-    folder = opened.get("folder") or q.folder_name()
-    q.save_state(
-        challenge_id=int(challenge_id),
-        challenge_version_id=int(opened["challenge_version_id"]),
-        base_url=opened["base_url"],
-        folder=folder,
-    )
-    say(f"  {opened.get('container_url') or opened['base_url']}")
+    def waiting(elapsed: float) -> str:
+        return "a cold start can take up to 3 minutes" if elapsed < 180 else "longer than a usual cold start"
+
+    with progress.step(f"Opening challenge {challenge_id} in a container", waiting=waiting) as s:
+        opened = backend.open_challenge(int(challenge_id))
+        folder = opened.get("folder") or q.folder_name()
+        q.save_state(
+            challenge_id=int(challenge_id),
+            challenge_version_id=int(opened["challenge_version_id"]),
+            base_url=opened["base_url"],
+            folder=folder,
+        )
+        s.result(f"Opened version {opened['challenge_version_id']} as {folder}")
+    progress.line(f"  {opened.get('container_url') or opened['base_url']}")
     container = Container(opened["base_url"], folder)
     wait_for_setup(container)
-    return Session(container, int(opened["challenge_version_id"]), opened_now=True)
+    return Session(container, int(opened["challenge_version_id"]))
 
 
-def wait_for_setup(container: Container, timeout: int = SETUP_WAIT_SECONDS) -> None:
-    """Wait for setup.sh to finish, print how it went, and stop if it failed."""
-    deadline = time.time() + timeout
-    announced = False
-    while True:
-        status = container.status()
-        setup = status.get("setup", {})
-        if not setup.get("has_setup_sh"):
-            return
-        exit_code = setup.get("exit_code")
-        # The exit code is only written when setup.sh ends; a failed run leaves the
-        # panel showing "in progress", so the exit code is what says it is over.
-        if exit_code is not None or setup.get("state") == "done":
-            break
-        if time.time() > deadline:
-            raise PraxisError("setup.sh is still running after 15 minutes. See `codepraxis logs <q> setup`.")
-        if not announced:
-            say("Waiting for setup.sh…")
-            announced = True
-        time.sleep(3)
-    tail = container.logs("setup", tail=15).get("text", "")
-    if exit_code not in (None, 0):
-        raise PraxisError(f"setup.sh failed (exit {exit_code}). Its last lines:\n{_indent(tail)}")
-    say("setup.sh finished.")
+def connect(q: Question) -> Session:
+    """The container the question was launched in, if it is still there."""
+    state = q.state()
+    if not (state.get("base_url") and state.get("folder")):
+        raise PraxisError(f"'{q.slug}' isn't launched. Run `codepraxis launch {q.slug}` first.")
+    container = Container(state["base_url"], state["folder"])
+    try:
+        container.status()
+    except (NotFound, Unreachable) as exc:
+        raise PraxisError(
+            f"The container '{q.slug}' was launched in is gone (reclaimed after 30 idle minutes, or "
+            f"stopped). Run `codepraxis launch {q.slug}` again."
+        ) from exc
+    return Session(container, int(state["challenge_version_id"]))
 
 
-# ── syncing ─────────────────────────────────────────────────────────────
+def wait_for_setup(container: Container, limit: int = SETUP_LIMIT_SECONDS) -> None:
+    """Wait for setup.sh (both runs: the candidate's and root's) and stop if either failed.
+
+    setup.sh must finish within ``limit`` seconds: every candidate waits for it.
+    """
+    latest = {"status": {}}
+
+    def waiting(elapsed: float) -> str:
+        last = latest["status"].get("setup", {}).get("last_line") or "no output yet"
+        return f"setup.sh still running (limit {limit}s); latest: {last[:160]}"
+
+    with progress.step("Waiting for setup.sh", waiting=waiting) as s:
+        started = time.time()
+        while True:
+            status = container.status()
+            latest["status"] = status
+            setup = status.get("setup", {})
+            if not setup.get("has_setup_sh"):
+                s.result("No setup.sh")
+                return
+            user_code, root_code = setup.get("exit_code"), setup.get("root_exit_code")
+            if user_code is not None and user_code != 0:
+                raise PraxisError(f"setup.sh failed (exit {user_code}).{_setup_tail(container)}")
+            if root_code is not None and root_code != 0:
+                raise PraxisError(f"setup.sh failed when run as root (exit {root_code}).{_setup_tail(container)}")
+            # An image from before the root run was logged reports only the user run.
+            root_known = root_code is not None or "root_exit_code" not in setup
+            if user_code == 0 and root_known:
+                s.result(f"setup.sh finished in about {time.time() - started:.0f}s")
+                return
+            if time.time() - started > limit:
+                raise PraxisError(
+                    f"setup.sh is still running after {limit} seconds, and it must finish within "
+                    f"{limit}: every candidate waits for it.{_setup_tail(container)}"
+                )
+            time.sleep(3)
+
+
+def _setup_tail(container: Container) -> str:
+    try:
+        text = container.logs("setup", tail=20).get("text", "")
+    except PraxisError:
+        return ""
+    return f" Its last lines:\n{_indent(text)}\nFull log: `codepraxis logs <q> setup`."
+
+
+# ── sending changed files ───────────────────────────────────────────────
 
 
 @dataclass
@@ -155,61 +216,52 @@ class SyncResult:
     setup_changed: bool
 
 
-def sync(q: Question, container: Container, *, quiet: bool = False) -> SyncResult:
-    """Make the container's copy of the question match the local pack.
+def send_changes(q: Question, container: Container) -> SyncResult:
+    """Make the container's copy match the local pack: send what differs, remove extras.
 
-    Compares hashes and sends only what differs. A file that exists only in the
-    container (output the code wrote, a file deleted locally) is removed, so the
-    container holds exactly what a candidate would get. Grader files go first so
-    the grader is reloaded before the workspace changes.
+    Grader files go first, so the grader is reloaded before the workspace
+    changes. A changed setup.sh is run again, within the same time limit.
     """
-    local = q.pack_files()
-    remote = {f["path"]: f for f in container.list_files()}
-    order = sorted(local, key=lambda p: (p.startswith("source/"), p))
-    written, deleted = [], []
-    for path in order:
-        data = local[path].read()
-        if remote.get(path, {}).get("sha256") != sha256(data):
-            container.write_file(path, data, executable=local[path].executable)
-            written.append(path)
-    for path in sorted(set(remote) - set(local)):
-        if not ignored(path):
-            container.delete_file(path)
-            deleted.append(path)
-    # A setup.sh the container already had ran at load; only a changed one needs rerunning.
+    with progress.step("Sending changed files to the container") as s:
+        local = q.pack_files()
+        remote = {f["path"]: f for f in container.list_files()}
+        written, deleted = [], []
+        for path in sorted(local, key=lambda p: (p.startswith("source/"), p)):
+            data = local[path].read()
+            if remote.get(path, {}).get("sha256") != sha256(data):
+                container.write_file(path, data, executable=local[path].executable)
+                written.append(path)
+                s.note(f"sent     {path}")
+        for path in sorted(set(remote) - set(local)):
+            if not ignored(path):
+                container.delete_file(path)
+                deleted.append(path)
+                s.note(f"removed  {path}")
+        s.result("Container already up to date" if not (written or deleted)
+                 else f"Sent {len(written)}, removed {len(deleted)}")
     result = SyncResult(written, deleted, setup_changed="setup.sh" in written and "setup.sh" in remote)
-    if not quiet:
-        _report_sync(result)
+    if result.setup_changed:
+        rerun_setup(container)
     return result
 
 
-def _report_sync(result: SyncResult) -> None:
-    if not result.written and not result.deleted:
-        say("Container is up to date.")
-        return
-    for path in result.written:
-        say(f"  sent     {path}")
-    for path in result.deleted:
-        say(f"  removed  {path}")
-
-
 def rerun_setup(container: Container) -> None:
-    """Run the changed setup.sh the way setup does, as the candidate user."""
-    say("setup.sh changed; running it again…")
     folder = container.folder
-    result = container.exec(f"bash /praxis/codeFromServer/{folder}/setup.sh {folder}", timeout_s=600)
-    output = (result.get("stdout") or "") + (result.get("stderr") or "")
-    if result.get("exit_code") != 0:
-        raise PraxisError(f"setup.sh failed (exit {result.get('exit_code')}):\n{_indent(_tail(output, 20))}")
-    say("setup.sh finished.")
 
+    def waiting(elapsed: float) -> str:
+        return f"setup.sh still running (limit {SETUP_LIMIT_SECONDS}s)"
 
-def push(q: Question, backend: Backend) -> Session:
-    session = open_container(q, backend)
-    result = sync(q, session.container)
-    if result.setup_changed and not session.opened_now:
-        rerun_setup(session.container)
-    return session
+    with progress.step("setup.sh changed; running it again as the candidate", waiting=waiting) as s:
+        result = container.exec(f"bash /praxis/codeFromServer/{folder}/setup.sh {folder}",
+                                timeout_s=SETUP_LIMIT_SECONDS)
+        output = (result.get("stdout") or "") + (result.get("stderr") or "")
+        if result.get("timed_out"):
+            raise PraxisError(
+                f"setup.sh took longer than {SETUP_LIMIT_SECONDS}s, the limit.\n{_indent(_tail(output, 20))}"
+            )
+        if result.get("exit_code") != 0:
+            raise PraxisError(f"setup.sh failed (exit {result.get('exit_code')}):\n{_indent(_tail(output, 20))}")
+        s.result(f"setup.sh finished in {result.get('seconds', 0):.0f}s")
 
 
 # ── running the grader ──────────────────────────────────────────────────
@@ -240,30 +292,41 @@ def cases_from(test_cases: dict) -> list[Case]:
     return sorted(found, key=lambda c: c.number)
 
 
-def run_visible(container: Container) -> tuple[list[Case], str | None]:
-    result = container.run()
-    test_cases = result.get("test_cases")
-    if test_cases is None:  # a container image from before Run returned its cases
-        import json
-
-        panel = container.logs("run").get("text") or "{}"
-        test_cases = json.loads(panel).get("test_cases", {})
-    return cases_from(test_cases), result.get("grader_error")
+def _grader_wait(what: str):
+    return lambda elapsed: f"{what} still running"
 
 
-def submit(container: Container, challenge_version_id: int) -> tuple[list[Case], str | None]:
-    result = container.submit(challenge_version_id)
-    return cases_from((result.get("results") or {}).get("test_cases", {})), result.get("grader_error")
+def run_visible(container: Container) -> list[Case]:
+    with progress.step("Running the visible cases (the candidate's Run)", waiting=_grader_wait("Run")) as s:
+        result = container.run()
+        test_cases = result.get("test_cases")
+        if test_cases is None:  # a container image from before Run returned its cases
+            import json
+
+            test_cases = json.loads(container.logs("run").get("text") or "{}").get("test_cases", {})
+        cases = cases_from(test_cases)
+        _stop_on_grader_error(cases, result.get("grader_error"))
+        s.result(f"Run finished: {sum(c.passed for c in cases)}/{len(cases)} passed")
+    return cases
+
+
+def submit(container: Container, challenge_version_id: int, label: str) -> list[Case]:
+    with progress.step(f"Submitting the {label} (all cases)", waiting=_grader_wait("Submit")) as s:
+        result = container.submit(challenge_version_id)
+        cases = cases_from((result.get("results") or {}).get("test_cases", {}))
+        _stop_on_grader_error(cases, result.get("grader_error"))
+        s.result(f"Submitted the {label}: {sum(c.passed for c in cases)}/{len(cases)} passed")
+    return cases
 
 
 def print_cases(cases: list[Case], visible: int | None = None) -> None:
     for case in cases:
         where = "" if visible is None else (" visible" if case.number <= visible else " hidden")
         mark = "PASS" if case.passed else (case.status or "—")
-        say(f"  case {case.number}{where}: {mark}")
+        progress.line(f"  case {case.number}{where}: {mark}")
         for label, value in (("Input", case.input), ("Expected", case.expected), ("Output", case.output)):
             if value:
-                say(f"      {label + ':':9} {_one_line(value)}")
+                progress.line(f"      {label + ':':9} {_one_line(value)}")
 
 
 def full_test(q: Question, session: Session) -> bool:
@@ -274,41 +337,41 @@ def full_test(q: Question, session: Session) -> bool:
     if not solution:
         raise PraxisError(f"{q.root / 'solution'} is empty: the full test needs the reference solution.")
 
-    say("\nStarter (every hidden case must fail):")
-    starter_cases, error = submit(container, session.challenge_version_id)
-    _stop_on_grader_error(starter_cases, error)
+    starter_cases = submit(container, session.challenge_version_id, "starter")
     print_cases(starter_cases, visible)
     hidden = [c for c in starter_cases if visible is None or c.number > visible]
-    starter_ok = bool(hidden) and not any(c.passed for c in hidden)
 
-    say("\nSolution (every case must pass):")
     starter_files = q.pack_files()
     try:
-        for path, local in solution.items():
-            container.write_file(path, local.read(), executable=local.executable)
-        solution_cases, error = submit(container, session.challenge_version_id)
+        with progress.step(f"Writing solution/ over the workspace ({len(solution)} files)"):
+            for path, local in solution.items():
+                container.write_file(path, local.read(), executable=local.executable)
+        solution_cases = submit(container, session.challenge_version_id, "solution")
     finally:
         # Put the starter back whatever happened, so the container matches the pack.
-        for path in solution:
-            if path in starter_files:
-                container.write_file(path, starter_files[path].read(), executable=starter_files[path].executable)
-            else:
-                container.delete_file(path)
-    _stop_on_grader_error(solution_cases, error)
+        with progress.step("Putting the starter back"):
+            for path in solution:
+                if path in starter_files:
+                    container.write_file(path, starter_files[path].read(), executable=starter_files[path].executable)
+                else:
+                    container.delete_file(path)
     print_cases(solution_cases, visible)
-    solution_ok = bool(solution_cases) and all(c.passed for c in solution_cases)
 
-    say("")
+    progress.line("")
     passing_hidden = [c.number for c in hidden if c.passed]
     if not hidden:
-        say("✗ Starter: no hidden cases ran" + ("" if visible is not None else " (no self.RUN in the grader)"))
+        reason = "" if visible is not None else " (no self.RUN in the grader)"
+        progress.failed(f"Starter: no hidden cases ran{reason}")
     elif passing_hidden:
-        say(f"✗ Starter passes hidden case(s) {passing_hidden}: they test nothing the starter lacks.")
+        progress.failed(f"Starter passes hidden case(s) {passing_hidden}: they test nothing the starter lacks.")
     else:
-        say("✓ Starter fails every hidden case.")
+        progress.done("Starter fails every hidden case.")
     failing = [c.number for c in solution_cases if not c.passed]
-    say("✓ Solution passes every case." if solution_ok else f"✗ Solution fails case(s) {failing}.")
-    return starter_ok and solution_ok
+    if failing or not solution_cases:
+        progress.failed(f"Solution fails case(s) {failing}.")
+    else:
+        progress.done("Solution passes every case.")
+    return bool(hidden) and not passing_hidden and bool(solution_cases) and not failing
 
 
 def _stop_on_grader_error(cases: list[Case], error: str | None) -> None:
@@ -317,6 +380,19 @@ def _stop_on_grader_error(cases: list[Case], error: str | None) -> None:
             "The grader produced no cases." + (f" Its log ends:\n{_indent(error)}" if error else
                                                " See `codepraxis logs <q> grader`.")
         )
+
+
+def setup_sh_problems(q: Question) -> list[str]:
+    """What output.md's setup.sh rules say is missing, before anything runs."""
+    path = q.pack / "setup.sh"
+    if not path.is_file():
+        return []
+    text = path.read_text(errors="replace")
+    problems = []
+    exits_on_error = re.search(r"^\s*set\s+-\w*e", text, re.M)
+    if not exits_on_error or "pipefail" not in text:
+        problems.append("setup.sh has no `set -euo pipefail`: a failing step would still report success.")
+    return problems
 
 
 # ── helpers ─────────────────────────────────────────────────────────────

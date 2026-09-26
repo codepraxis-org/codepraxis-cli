@@ -131,6 +131,20 @@ class Backend:
     def get(self, path: str) -> Any:
         return self._call("GET", path)
 
+    def get_bytes(self, path: str) -> bytes:
+        """A binary download (a question's zip), not a JSON response."""
+        request = urllib.request.Request(
+            f"{self._url}{path}", method="GET",
+            headers={"Authorization": f"Bearer {self._key}", "X-Praxis-CLI-Version": __version__},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            raise _http_error(exc, "GET", f"{self._url}{path}") from exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            raise Unreachable(f"Could not reach {self._url}: {getattr(exc, 'reason', exc)}") from exc
+
     def post_json(self, path: str, payload: Any, timeout: float = 60) -> Any:
         return self._call("POST", path, body=json.dumps(payload).encode(), content_type="application/json",
                           timeout=timeout)

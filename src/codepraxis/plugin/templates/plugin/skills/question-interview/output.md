@@ -12,7 +12,7 @@ challenges/<slug>/
     └── loader.sql
 ```
 
-`codepraxis publish` uploads each file in `entities/`, puts the returned ids
+`codepraxis push` uploads each file in `entities/`, puts the returned ids
 into `question.json` where the file name is used, and saves the question as a
 **draft**. The author publishes it from the website, which first checks that it
 can run.
@@ -158,7 +158,7 @@ markdown.
 
 An entity can be attached to the opening question (`entity_refs`), to a probe
 (shown when it fires) or to a hint (shown when it's used). In `question.json`,
-refer to entities by their file name in `entities/`; `publish` swaps in the ids.
+refer to entities by their file name in `entities/`; `push` swaps in the ids.
 
 ## The check
 

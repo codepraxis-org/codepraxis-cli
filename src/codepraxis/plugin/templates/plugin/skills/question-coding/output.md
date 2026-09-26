@@ -72,7 +72,7 @@ reaches a candidate.
 ## publish.json
 
 The question's catalog entry. Write it in the build step, from `spec.md`.
-`codepraxis publish` reads it and writes the question to the database.
+`codepraxis push` reads it and writes the question to the database.
 
 ```json
 {
@@ -105,7 +105,7 @@ The question's catalog entry. Write it in the build step, from `spec.md`.
 | `delivery_mode` | no | `oa` (default), or `take_home` for questions that are only sent, never browsed |
 | `categories` | public only | Category slugs (below) |
 | `description_sections` | yes | The five sections the question page shows, all five, in markdown. Written for the hiring company, not the candidate |
-| `challenge_id` | added by the CLI | Written back after the first publish; keep it, so the next publish is a new version instead of a duplicate |
+| `challenge_id` | added by the CLI | Written back after the first push; keep it, so the next push updates this question instead of creating a duplicate |
 
 **Where the question appears** depends on the account that publishes it:
 
@@ -119,14 +119,20 @@ The question's catalog entry. Write it in the build step, from `spec.md`.
 If none fits, use `misc`. An unknown slug is skipped, and a question with no
 valid category goes to `misc`; categories are never created by publishing.
 
-**Drafts.** `codepraxis publish` always creates a draft. A draft can be
+**Drafts.** A question pushed for the first time is a draft. A draft can be
 previewed, but not assigned or added to a template. The author publishes it
 from the question's page on the website.
 
 ## setup.sh
 
-- Runs on **every** container load, as the candidate user. Every second it takes,
-  every candidate waits.
+- Runs on **every** container load, twice at once: as the candidate user and
+  as root. Both runs must succeed. Every second it takes, every candidate waits.
+- **Starts with `set -euo pipefail`.** Without it, a failing step (a `pip
+  install` that can't find a version) is ignored and setup still reports
+  success; the candidate then meets the failure mid-question. The CLI warns when
+  it is missing.
+- **Finishes within 2 minutes.** `codepraxis launch` stops a setup that runs
+  longer. Install only what the question needs, pinned, and nothing large.
 - `pip install --user`, and **pin every version**: an unpinned install resolves
   to whatever is current on the day and breaks later.
 - Already in the image: Python 3, Node 20, gcc/g++/make, .NET 8, git, tmux.

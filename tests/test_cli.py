@@ -19,7 +19,7 @@ def _coding_question(tmp_path: Path) -> Question:
     files = {
         "pack/metadata.json": '{"name": "invoice_rerun"}',
         "pack/backend.conf": '{"BACKEND": "AI", "LANGUAGE": "PYTHON"}',
-        "pack/setup.sh": "pip install x\n",
+        "pack/setup.sh": "set -euo pipefail\npip install x\n",
         "pack/._tests/test_1.py": "class testCases:\n    def __init__(self, w):\n        self.RUN = 2\n",
         "pack/._course_data/feature.md": "# Problem",
         "pack/source/main.py": "print('starter')\n",
@@ -55,6 +55,10 @@ class FakeContainer:
 
     def submit(self, version_id):
         return self.submits.pop(0)(self.files)
+
+    def exec(self, command, timeout_s=120):
+        self.execs = getattr(self, "execs", []) + [command]
+        return {"exit_code": 0, "stdout": "", "stderr": "", "seconds": 1}
 
 
 class TestFindingAQuestion:
@@ -110,7 +114,7 @@ class TestSync:
         local = {p: f.read() for p, f in q.pack_files().items()}
         remote = {**local, "source/main.py": b"old", "source/output.log": b"written by a run"}
         container = FakeContainer(remote)
-        result = coding.sync(q, container, quiet=True)
+        result = coding.send_changes(q, container)
         assert result.written == ["source/main.py"]
         assert result.deleted == ["source/output.log"]
         assert not result.setup_changed
@@ -118,7 +122,7 @@ class TestSync:
     def test_grader_files_are_sent_before_the_workspace(self, tmp_path):
         q = _coding_question(tmp_path)
         container = FakeContainer({})
-        coding.sync(q, container, quiet=True)
+        coding.send_changes(q, container)
         first_source = min(i for i, p in enumerate(container.writes) if p.startswith("source/"))
         assert all(not p.startswith("source/") for p in container.writes[:first_source])
 
@@ -126,7 +130,7 @@ class TestSync:
         q = _coding_question(tmp_path)
         local = {p: f.read() for p, f in q.pack_files().items()}
         container = FakeContainer({**local, "setup.sh": b"old setup"})
-        assert coding.sync(q, container, quiet=True).setup_changed
+        assert coding.send_changes(q, container).setup_changed
 
 
 def _result(statuses):
@@ -136,7 +140,7 @@ def _result(statuses):
 
 class TestTheFullTest:
     def _session(self, container):
-        return coding.Session(container, challenge_version_id=7, opened_now=False)
+        return coding.Session(container, challenge_version_id=7)
 
     def test_passes_when_starter_fails_hidden_and_solution_passes_all(self, tmp_path):
         q = _coding_question(tmp_path)
@@ -239,3 +243,91 @@ class TestTheApiKey:
     def test_dashboard_links_drop_the_api_prefix(self, monkeypatch):
         monkeypatch.delenv(platform.ENV_API_URL, raising=False)
         assert platform.website_url() == "https://www.codepraxis.co"
+
+
+class FakeStatusContainer:
+    """Answers status with a scripted sequence, then logs."""
+
+    folder = "invoice_rerun"
+
+    def __init__(self, statuses):
+        self.statuses = list(statuses)
+
+    def status(self):
+        return {"setup": self.statuses.pop(0) if len(self.statuses) > 1 else self.statuses[0]}
+
+    def logs(self, source, tail=200):
+        return {"text": "Collecting oracledb\nERROR: No matching distribution"}
+
+
+def _setup(**kw):
+    return {"has_setup_sh": True, "exit_code": None, "root_exit_code": None, "last_line": "", **kw}
+
+
+class TestWaitingForSetup:
+    @pytest.fixture(autouse=True)
+    def fast(self, monkeypatch):
+        monkeypatch.setattr(coding.time, "sleep", lambda s: None)
+
+    def test_both_runs_finishing_cleanly_is_success(self):
+        coding.wait_for_setup(FakeStatusContainer([_setup(), _setup(exit_code=0, root_exit_code=0)]))
+
+    def test_a_failed_candidate_run_stops_with_its_log(self):
+        with pytest.raises(PraxisError, match="exit 1") as err:
+            coding.wait_for_setup(FakeStatusContainer([_setup(exit_code=1)]))
+        assert "No matching distribution" in str(err.value)
+
+    def test_a_failed_root_run_is_caught_too(self):
+        with pytest.raises(PraxisError, match="root"):
+            coding.wait_for_setup(FakeStatusContainer([_setup(exit_code=0, root_exit_code=2)]))
+
+    def test_more_than_the_limit_is_refused(self, monkeypatch):
+        clock = iter(range(0, 10_000, 50))
+        monkeypatch.setattr(coding.time, "time", lambda: next(clock))
+        with pytest.raises(PraxisError, match="must finish within 120"):
+            coding.wait_for_setup(FakeStatusContainer([_setup()]))
+
+    def test_an_older_image_that_reports_no_root_run_still_finishes(self):
+        old = {"has_setup_sh": True, "exit_code": 0, "state": "done"}
+        coding.wait_for_setup(FakeStatusContainer([old]))
+
+
+class TestSetupRules:
+    def test_a_setup_sh_without_set_e_is_flagged(self, tmp_path):
+        q = _coding_question(tmp_path)
+        (q.pack / "setup.sh").write_text("pip install x\n")
+        assert coding.setup_sh_problems(q)
+
+    def test_set_euo_pipefail_satisfies_it(self, tmp_path):
+        assert coding.setup_sh_problems(_coding_question(tmp_path)) == []
+
+
+class TestPullingAnInterviewQuestionBack:
+    def test_ids_become_the_same_file_names_again(self):
+        ids = {"loader.sql": 1, "diagram.png": 2, "log.md": 3, "deep.excalidraw": 4}
+        stored = interview.with_entity_ids(QUESTION, ids)
+        back = interview.with_file_names(stored, {v: k for k, v in ids.items()})
+        assert back["entity_refs"] == QUESTION["entity_refs"]
+        assert back["mcq_choices"][0] == {"id": "a", "file": "diagram.png"}
+        assert back["probes"][0]["next"][0]["entities"] == ["deep.excalidraw"]
+
+    def test_two_files_with_one_name_are_kept_apart(self):
+        assert interview._unique_name("a.png", {"a.png"}) == "a_2.png"
+
+
+class TestProgress:
+    def test_a_step_says_when_it_starts_and_how_it_ended(self, capsys):
+        from codepraxis import progress
+
+        with progress.step("Pushing x") as s:
+            s.result("Draft updated")
+        out = capsys.readouterr().out
+        assert "→ Pushing x…" in out and "✓ Draft updated" in out
+
+    def test_a_failing_step_says_so_with_the_reason(self, capsys):
+        from codepraxis import progress
+
+        with pytest.raises(PraxisError), progress.step("Opening"):
+            raise PraxisError("pool is empty\nmore detail")
+        assert "✗ Opening" in capsys.readouterr().out
+

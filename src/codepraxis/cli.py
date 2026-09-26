@@ -1,15 +1,13 @@
 """The ``codepraxis`` command line.
 
-Building a question happens in a real container, never locally:
-
-    codepraxis categories                   the categories a public question can go into
-    codepraxis push    <q>                  send changed files; the first push opens the container
-    codepraxis pull    <q> [path]           get files back from the container
-    codepraxis exec    <q> "<command>"      run a command in the workspace as the candidate
-    codepraxis test    <q> [--visible]      Run, or the full starter and solution check
+    codepraxis push    <q>                  save the question to the platform (as a draft)
+    codepraxis pull    <q|id>               get a question back from the platform
+    codepraxis launch  <q> [--fresh]        open it in a container, the way a candidate gets it
+    codepraxis exec    <q> "<command>"      run a command there as the candidate (sends changes first)
+    codepraxis test    <q> [--visible]      Run, or the starter/solution check (sends changes first)
     codepraxis logs    <q> [source]         setup, grader, exec, run or results
-    codepraxis publish <q>                  save the question as a draft and print its URL
-    codepraxis stop    <q>                  hand the container back early
+    codepraxis categories                   the categories a public question can go into
+    codepraxis stop    <q>                  hand the container back now
 
 The API key comes from ``CODEPRAXIS_API_KEY``. ``<q>`` is a folder under
 ``challenges/``, or a path to one.
@@ -21,9 +19,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, coding, interview
+from . import __version__, coding, interview, progress
 from .errors import PraxisError
-from .platform import Backend, Container, NotFound, Unreachable
+from .platform import Backend
 from .plugin import installer
 from .question import Question
 
@@ -37,24 +35,27 @@ LOG_SOURCES = ("setup", "grader", "exec", "run", "results")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="codepraxis",
-        description="Build CodePraxis questions in a real container and publish them as drafts.",
+        description="Build CodePraxis questions in a real container and save them to the platform as drafts.",
     )
     parser.add_argument("--version", action="version", version=f"codepraxis {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
-    cmd = sub.add_parser("categories", help="List the categories a public question can go into.")
-    cmd.set_defaults(handler=cmd_categories)
-
-    cmd = sub.add_parser("push", help="Send changed files to the container; the first push opens it.")
+    cmd = sub.add_parser("push", help="Save the question to the platform (a draft keeps one version).")
     cmd.add_argument("question")
     cmd.set_defaults(handler=cmd_push)
 
-    cmd = sub.add_parser("pull", help="Get files back from the container into the local pack.")
-    cmd.add_argument("question")
-    cmd.add_argument("path", nargs="?", help="One file, e.g. source/main.py. Default: every file that differs.")
+    cmd = sub.add_parser("pull", help="Get a question back from the platform, solution included.")
+    cmd.add_argument("question", help="A question folder, or a question id.")
+    cmd.add_argument("--interview", action="store_true", help="The id is an AI interview question.")
+    cmd.add_argument("--into", type=Path, help="Folder to write into. Default: challenges/<name>.")
     cmd.set_defaults(handler=cmd_pull)
 
-    cmd = sub.add_parser("exec", help="Run a command in the workspace as the candidate user.")
+    cmd = sub.add_parser("launch", help="Open the pushed question in a container, as a candidate gets it.")
+    cmd.add_argument("question")
+    cmd.add_argument("--fresh", action="store_true", help="Hand the current container back and start clean.")
+    cmd.set_defaults(handler=cmd_launch)
+
+    cmd = sub.add_parser("exec", help="Run a command in the workspace as the candidate (sends changes first).")
     cmd.add_argument("question")
     cmd.add_argument("shell_command", metavar="command")
     cmd.add_argument("--timeout", type=int, default=120, help="Seconds, at most 600. Default 120.")
@@ -71,15 +72,14 @@ def build_parser() -> argparse.ArgumentParser:
     cmd.add_argument("--tail", type=int, default=200, help="Lines to show. Default 200.")
     cmd.set_defaults(handler=cmd_logs)
 
-    cmd = sub.add_parser("publish", help="Save the question to the platform as a draft and print its URL.")
-    cmd.add_argument("question")
-    cmd.set_defaults(handler=cmd_publish)
+    cmd = sub.add_parser("categories", help="List the categories a public question can go into.")
+    cmd.set_defaults(handler=cmd_categories)
 
     cmd = sub.add_parser("stop", help="Hand the container back now instead of after 30 idle minutes.")
     cmd.add_argument("question")
     cmd.set_defaults(handler=cmd_stop)
 
-    cmd = sub.add_parser("install", help="Install the Claude Code plugin into this repository.")
+    cmd = sub.add_parser("install", help="Write the Claude Code plugin into this repository.")
     cmd.add_argument("target", choices=("claude-plugin",))
     cmd.add_argument("--force", action="store_true", help="Overwrite an existing install.")
     cmd.set_defaults(handler=cmd_install)
@@ -89,133 +89,129 @@ def build_parser() -> argparse.ArgumentParser:
 # ── commands ────────────────────────────────────────────────────────────
 
 
-def cmd_categories(args) -> int:
-    for category in Backend().get("/categories").get("categories", []):
-        print(f"{category['slug']:32} {category['name']}")
-    return EXIT_OK
-
-
 def cmd_push(args) -> int:
     q = Question.find(args.question)
-    q.require_coding("push")
-    coding.push(q, Backend())
+    if q.kind == "interview":
+        interview.save(q, Backend())
+    else:
+        _warn_setup_rules(q)
+        coding.push(q, Backend())
+        progress.next_step(f"`codepraxis launch {q.slug}` to try it in a container.")
     return EXIT_OK
 
 
 def cmd_pull(args) -> int:
-    q = Question.find(args.question)
-    q.require_coding("pull")
-    container = _open_container(q)
-    local = q.pack_files()
-    if args.path:
-        paths = [args.path]
+    backend = Backend()
+    folder = Path(args.question)
+    existing = None
+    for candidate in (folder, Path.cwd() / args.question, Path.cwd() / "challenges" / args.question):
+        if candidate.is_dir():
+            existing = Question.find(str(candidate))
+            break
+    if existing is not None:
+        if existing.kind == "interview":
+            question_id = existing.read_question().get("id")
+            if not question_id:
+                raise PraxisError(f"{existing.question_json} has no id: it was never pushed.")
+            interview.pull(backend, int(question_id), existing.root)
+        else:
+            challenge_id = existing.read_publish().get("challenge_id")
+            if not challenge_id:
+                raise PraxisError(f"{existing.publish_json} has no challenge_id: it was never pushed.")
+            coding.pull(backend, int(challenge_id), existing.root)
+        return EXIT_OK
+    if not args.question.isdigit():
+        raise PraxisError(f"'{args.question}' is neither a question folder nor an id.")
+    question_id = int(args.question)
+    if args.interview:
+        interview.pull(backend, question_id, args.into or Path.cwd() / "challenges" / f"interview_{question_id}")
     else:
-        from .question import sha256
+        coding.pull(backend, question_id, args.into or Path.cwd() / "challenges")
+    return EXIT_OK
 
-        remote = container.list_files()
-        paths = [f["path"] for f in remote
-                 if f["path"] not in local or sha256(local[f["path"]].read()) != f["sha256"]]
-    if not paths:
-        print("Local pack already matches the container.")
-    for path in paths:
-        target = q.pack / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(container.read_file(path))
-        print(f"  pulled  {path}")
+
+def cmd_launch(args) -> int:
+    q = Question.find(args.question)
+    q.require_coding("launch")
+    _warn_setup_rules(q)
+    coding.launch(q, Backend(), fresh=args.fresh)
+    progress.next_step(f"`codepraxis test {q.slug} --visible`, or `codepraxis exec {q.slug} \"<command>\"`.")
     return EXIT_OK
 
 
 def cmd_exec(args) -> int:
     q = Question.find(args.question)
     q.require_coding("exec")
-    session = coding.push(q, Backend())
-    result = session.container.exec(args.shell_command, timeout_s=args.timeout)
+    session = coding.connect(q)
+    coding.send_changes(q, session.container)
+    with progress.step(f"Running `{args.shell_command}` as the candidate",
+                       waiting=lambda elapsed: f"still running (timeout {args.timeout}s)") as s:
+        result = session.container.exec(args.shell_command, timeout_s=args.timeout)
+        s.result(f"Exit {result.get('exit_code')} after {result.get('seconds', 0)}s"
+                 if not result.get("timed_out") else f"Timed out after {args.timeout}s")
     sys.stdout.write(result.get("stdout") or "")
-    sys.stderr.write(result.get("stderr") or "")
+    sys.stdout.write(result.get("stderr") or "")
     if result.get("timed_out"):
-        print(f"\n(timed out after {args.timeout}s)", file=sys.stderr)
         return EXIT_FAILED
     return int(result.get("exit_code") or 0)
 
 
 def cmd_test(args) -> int:
     q = Question.find(args.question)
-    backend = Backend()
     if q.kind == "interview":
         if args.visible:
             raise PraxisError("--visible is for coding questions.")
-        return EXIT_OK if interview.check(q, backend) else EXIT_FAILED
-    session = coding.push(q, backend)
+        ok = interview.check(q, Backend())
+        progress.next_step(f"`codepraxis push {q.slug}`" if ok else "fix the blockers above and test again.")
+        return EXIT_OK if ok else EXIT_FAILED
+    _warn_setup_rules(q)
+    session = coding.connect(q)
+    coding.send_changes(q, session.container)
     if args.visible:
-        cases, error = coding.run_visible(session.container)
-        if not cases:
-            raise PraxisError("Run produced no cases." + (f" The grader's log ends:\n{error}" if error else ""))
-        coding.print_cases(cases)
+        coding.print_cases(coding.run_visible(session.container))
         return EXIT_OK
-    return EXIT_OK if coding.full_test(q, session) else EXIT_FAILED
+    ok = coding.full_test(q, session)
+    progress.next_step(f"`codepraxis push {q.slug}` to save it." if ok
+                       else "fix what failed above, then test again.")
+    return EXIT_OK if ok else EXIT_FAILED
 
 
 def cmd_logs(args) -> int:
     q = Question.find(args.question)
     q.require_coding("logs")
-    result = _open_container(q).logs(args.source, tail=args.tail)
+    result = coding.connect(q).container.logs(args.source, tail=args.tail)
     if not result.get("exists"):
-        print(f"No {args.source} log yet.")
+        progress.line(f"No {args.source} log yet.")
         return EXIT_OK
-    print(result.get("text", ""))
+    progress.line(result.get("text", ""))
     return EXIT_OK
 
 
-def cmd_publish(args) -> int:
-    q = Question.find(args.question)
-    backend = Backend()
-    if q.kind == "interview":
-        result = interview.save(q, backend)
-        verb = "Saved" if result.get("created") else "Updated"
-        where = "the public bank" if result.get("visibility") == "public" else "your company"
-        print(f"{verb} as a draft in {where}: question {result['question_id']}")
-        if result.get("categories"):
-            print(f"  categories: {', '.join(result['categories'])}")
-        print(f"  {result['url']}")
-    else:
-        result = coding.save_draft(q, backend)
-        print(f"Saved as a draft: challenge {result.get('challenge_id')}, version {result.get('challenge_version_id')}")
-        if result.get("categories"):
-            print(f"  categories: {', '.join(result['categories'])}")
-        print(f"  {coding.dashboard_link(result.get('challenge_id'))}")
-    print("Publish it from that page when it's ready.")
+def cmd_categories(args) -> int:
+    for category in Backend().get("/categories").get("categories", []):
+        progress.line(f"{category['slug']:32} {category['name']}")
     return EXIT_OK
 
 
 def cmd_stop(args) -> int:
     q = Question.find(args.question)
     q.require_coding("stop")
-    released = Backend().delete("/container").get("released")
-    q.save_state(base_url=None, folder=None)
-    print("Container handed back." if released else "No container was open.")
+    with progress.step("Handing the container back") as s:
+        released = Backend().delete("/container").get("released")
+        q.save_state(base_url=None, folder=None)
+        s.result("Container handed back" if released else "No container was open")
     return EXIT_OK
 
 
 def cmd_install(args) -> int:
     result = installer.install(Path.cwd(), force=args.force)
-    print(installer.describe(result))
+    progress.line(installer.describe(result))
     return EXIT_OK
 
 
-# ── helpers ─────────────────────────────────────────────────────────────
-
-
-def _open_container(q: Question) -> Container:
-    """The container the question is open in, for commands that only read from it."""
-    state = q.state()
-    if state.get("base_url") and state.get("folder"):
-        container = Container(state["base_url"], state["folder"])
-        try:
-            container.status()
-            return container
-        except (NotFound, Unreachable):
-            pass
-    raise PraxisError(f"'{q.slug}' isn't open in a container. Run `codepraxis push {q.slug}` first.")
+def _warn_setup_rules(q: Question) -> None:
+    for problem in coding.setup_sh_problems(q):
+        progress.warn(problem)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -228,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return handler(args)
     except PraxisError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(f"error: {exc}", file=sys.stderr, flush=True)
         return EXIT_FAILED
     except KeyboardInterrupt:  # pragma: no cover
         print("interrupted", file=sys.stderr)
