@@ -241,19 +241,27 @@ def send_changes(q: Question, container: Container) -> SyncResult:
                  else f"Sent {len(written)}, removed {len(deleted)}")
     result = SyncResult(written, deleted, setup_changed="setup.sh" in written and "setup.sh" in remote)
     if result.setup_changed:
-        rerun_setup(container)
+        rerun_setup(container, local["setup.sh"].read().decode("utf-8", errors="replace"))
     return result
 
 
-def rerun_setup(container: Container) -> None:
+def rerun_setup(container: Container, script: str) -> None:
+    """Run a changed setup.sh again, as the candidate user.
+
+    The candidate can't read /praxis, where the pack lives (it is 700 root), so
+    the script is passed in on stdin rather than run from its path; the platform
+    copies it to /tmp for the same reason. This reruns the candidate's run only:
+    `launch --fresh` repeats the whole setup, root's run included.
+    """
     folder = container.folder
+    marker = "CODEPRAXIS_SETUP_SH_END"
+    command = f"bash -s -- {folder} <<'{marker}'\n{script.rstrip()}\n{marker}"
 
     def waiting(elapsed: float) -> str:
         return f"setup.sh still running (limit {SETUP_LIMIT_SECONDS}s)"
 
     with progress.step("setup.sh changed; running it again as the candidate", waiting=waiting) as s:
-        result = container.exec(f"bash /praxis/codeFromServer/{folder}/setup.sh {folder}",
-                                timeout_s=SETUP_LIMIT_SECONDS)
+        result = container.exec(command, timeout_s=SETUP_LIMIT_SECONDS)
         output = (result.get("stdout") or "") + (result.get("stderr") or "")
         if result.get("timed_out"):
             raise PraxisError(

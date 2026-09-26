@@ -331,3 +331,15 @@ class TestProgress:
             raise PraxisError("pool is empty\nmore detail")
         assert "✗ Opening" in capsys.readouterr().out
 
+
+class TestRerunningSetup:
+    def test_the_script_is_passed_in_not_read_from_the_root_only_pack(self, tmp_path):
+        q = _coding_question(tmp_path)
+        local = {p: f.read() for p, f in q.pack_files().items()}
+        container = FakeContainer({**local, "setup.sh": b"old setup"})
+        coding.send_changes(q, container)
+        (command,) = container.execs
+        assert "/praxis/" not in command
+        assert command.startswith("bash -s -- invoice_rerun <<'CODEPRAXIS_SETUP_SH_END'")
+        assert "pip install x" in command
+
