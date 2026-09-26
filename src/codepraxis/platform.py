@@ -225,6 +225,12 @@ class Container:
         return _request("POST", self._url("/author/exec"), body=json.dumps(body).encode(),
                         content_type="application/json", timeout=timeout_s + 30)
 
+    def rerun_setup(self, timeout_s: int = 120) -> dict:
+        """setup.sh again through the platform's own runner (both runs, panel state)."""
+        body = {"folder": self.folder, "timeout_s": timeout_s}
+        return _request("POST", self._url("/author/setup"), body=json.dumps(body).encode(),
+                        content_type="application/json", timeout=timeout_s + 30)
+
     def logs(self, source: str, tail: int = 200) -> dict:
         return _request("GET", self._url("/author/logs", folder=self.folder, source=source, tail=tail), timeout=30)
 

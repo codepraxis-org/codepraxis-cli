@@ -323,13 +323,34 @@ def send_changes(q: Question, container: Container) -> SyncResult:
 
 
 def rerun_setup(container: Container, script: str) -> None:
-    """Run a changed setup.sh again, as the candidate user.
+    """Run a changed setup.sh again, the way a container load runs it.
 
-    The candidate can't read /praxis, where the pack lives (it is 700 root), so
-    the script is passed in on stdin rather than run from its path; the platform
-    copies it to /tmp for the same reason. This reruns the candidate's run only:
-    `launch --fresh` repeats the whole setup, root's run included.
+    Through the container's own setup runner: both runs (the candidate's and
+    root's), the same log, and the panel state Run and Submit wait on. Images
+    without that endpoint fall back to running the script as the candidate.
     """
+    def waiting(elapsed: float) -> str:
+        return f"setup.sh still running (limit {SETUP_LIMIT_SECONDS}s)"
+
+    try:
+        with progress.step("setup.sh changed; running it again as a container load does", waiting=waiting) as s:
+            result = container.rerun_setup(SETUP_LIMIT_SECONDS)
+            tail = result.get("tail") or ""
+            if result.get("timed_out"):
+                raise PraxisError(f"setup.sh took longer than {SETUP_LIMIT_SECONDS}s, the limit.\n{_indent(tail)}")
+            for label, code in (("", result.get("exit_code")), (" when run as root", result.get("root_exit_code"))):
+                if code not in (None, 0):
+                    raise PraxisError(f"setup.sh failed{label} (exit {code}):\n{_indent(tail)}")
+            s.result(f"setup.sh finished in {result.get('seconds', 0):.0f}s")
+        return
+    except NotFound:
+        progress.warn("this container's image can't rerun setup the platform's way; running it as the candidate. "
+                      "If setup had failed before, Run and Submit stay stuck until `launch --fresh`.")
+    _rerun_setup_as_candidate(container, script)
+
+
+def _rerun_setup_as_candidate(container: Container, script: str) -> None:
+    """Older images: the script on stdin (the candidate can't read /praxis), candidate's run only."""
     folder = container.folder
     marker = "CODEPRAXIS_SETUP_SH_END"
     command = f"bash -s -- {folder} <<'{marker}'\n{script.rstrip()}\n{marker}"

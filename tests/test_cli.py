@@ -62,6 +62,14 @@ class FakeContainer:
     def logs(self, source, tail=200):
         return {"text": getattr(self, "results_text", "{}")}
 
+    def rerun_setup(self, timeout_s=120):
+        from codepraxis.platform import NotFound
+
+        if getattr(self, "old_image", True):
+            raise NotFound("no /author/setup", 404)
+        self.setup_reruns = getattr(self, "setup_reruns", 0) + 1
+        return {"ran": True, "exit_code": 0, "root_exit_code": 0, "seconds": 3, "tail": ""}
+
     def exec(self, command, timeout_s=120):
         self.execs = getattr(self, "execs", []) + [command]
         return {"exit_code": 0, "stdout": "", "stderr": "", "seconds": 1}
@@ -411,4 +419,15 @@ class TestTheBaseCommit:
         first = {k for k in coding.base_repository(q, tmp_path / "a") if k.startswith("objects/")}
         second = {k for k in coding.base_repository(q, tmp_path / "b") if k.startswith("objects/")}
         assert first == second
+
+
+class TestRerunningSetupOnANewImage:
+    def test_the_platform_runner_is_used_when_the_image_has_it(self, tmp_path):
+        q = _coding_question(tmp_path)
+        local = {p: f.read() for p, f in q.pack_files().items()}
+        container = FakeContainer({**local, "setup.sh": b"old setup"})
+        container.old_image = False
+        coding.send_changes(q, container)
+        assert container.setup_reruns == 1
+        assert not getattr(container, "execs", [])
 
