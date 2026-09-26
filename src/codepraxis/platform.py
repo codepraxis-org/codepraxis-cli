@@ -20,6 +20,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -56,7 +57,15 @@ def website_url() -> str:
     return base
 
 
-class NotFound(PraxisError):
+class HttpError(PraxisError):
+    """The server answered with an error status."""
+
+    def __init__(self, message: str, status: int) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+class NotFound(HttpError):
     """The server answered 404."""
 
 
@@ -110,10 +119,10 @@ def _http_error(exc: urllib.error.HTTPError, method: str, url: str) -> PraxisErr
         detail = json.dumps(detail)[:800]
     path = urllib.parse.urlparse(url).path
     if exc.code == 401:
-        return PraxisError(f"The API key was refused. Check {ENV_API_KEY}.")
+        return HttpError(f"The API key was refused. Check {ENV_API_KEY}.", 401)
     if exc.code == 404:
-        return NotFound(detail or f"{path} not found")
-    return PraxisError(f"{method} {path} failed ({exc.code}): {detail}")
+        return NotFound(detail or f"{path} not found", 404)
+    return HttpError(f"{method} {path} failed ({exc.code}): {detail}", exc.code)
 
 
 class Backend:
@@ -155,10 +164,30 @@ class Backend:
     def delete(self, path: str) -> Any:
         return self._call("DELETE", path)
 
-    # Opening a question takes a container from the pool, which can mean a cold
-    # start of a few minutes, then loads it and starts setup.sh.
-    def open_challenge(self, challenge_id: int) -> dict:
-        return self._call("POST", f"/challenges/{challenge_id}/open", timeout=420)
+    #: How long launch keeps asking while the platform starts a container.
+    OPEN_DEADLINE_SECONDS = 480
+
+    def open_challenge(self, challenge_id: int, on_retry=None) -> dict:
+        """Open a question in the key owner's container.
+
+        A cold start can take minutes, but the website's proxy cuts any request
+        off at 45 seconds (it answers 500, 502 or 504) while the backend carries
+        on starting the container. Asking again is safe: the backend reuses the
+        container it is preparing, and answers quickly once it is ready.
+        """
+        deadline = time.time() + self.OPEN_DEADLINE_SECONDS
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return self._call("POST", f"/challenges/{challenge_id}/open", timeout=120)
+            except (HttpError, Unreachable) as exc:
+                cut_off = isinstance(exc, Unreachable) or getattr(exc, "status", 0) in (500, 502, 503, 504)
+                if not cut_off or time.time() > deadline:
+                    raise
+                if on_retry:
+                    on_retry(attempt, exc)
+                time.sleep(15)
 
 
 class Container:

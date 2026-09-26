@@ -21,7 +21,7 @@ from pathlib import Path
 
 from . import progress
 from .errors import PraxisError
-from .platform import Backend, Container, NotFound, Unreachable, website_url
+from .platform import Backend, Container, HttpError, NotFound, Unreachable, website_url
 from .question import Question, ignored, sha256
 
 #: setup.sh must finish within this. It runs on every candidate's container load.
@@ -129,7 +129,11 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
         return "a cold start can take up to 3 minutes" if elapsed < 180 else "longer than a usual cold start"
 
     with progress.step(f"Opening challenge {challenge_id} in a container", waiting=waiting) as s:
-        opened = backend.open_challenge(int(challenge_id))
+        def retrying(attempt: int, exc: Exception) -> None:
+            s.note(f"request {attempt} was cut off ({str(exc)[:80]}); the platform is still starting "
+                   "the container, asking again in 15s")
+
+        opened = backend.open_challenge(int(challenge_id), on_retry=retrying)
         folder = opened.get("folder") or q.folder_name()
         q.save_state(
             challenge_id=int(challenge_id),
@@ -321,13 +325,41 @@ def run_visible(container: Container) -> list[Case]:
     return cases
 
 
+#: The longest a Submit may take once its request has been cut off.
+SUBMIT_WAIT_SECONDS = 600
+
+
 def submit(container: Container, challenge_version_id: int, label: str) -> list[Case]:
     with progress.step(f"Submitting the {label} (all cases)", waiting=_grader_wait("Submit")) as s:
-        result = container.submit(challenge_version_id)
-        cases = cases_from((result.get("results") or {}).get("test_cases", {}))
-        _stop_on_grader_error(cases, result.get("grader_error"))
+        before = container.status().get("last_submit_at") or 0
+        try:
+            result = container.submit(challenge_version_id)
+            test_cases = (result.get("results") or {}).get("test_cases", {})
+            grader_error = result.get("grader_error")
+        except HttpError as exc:
+            # Images before 26 Sep cut a Submit over ~40s off (a keepalive ping the
+            # grading agent can't answer) while the grader carries on. Wait for it
+            # to write its results rather than touch the workspace mid-run.
+            if "keepalive" not in str(exc) and "WebSocket" not in str(exc):
+                raise
+            s.note("the request was cut off, but the grader is still running; waiting for its results")
+            test_cases, grader_error = _wait_for_results(container, before), None
+        cases = cases_from(test_cases)
+        _stop_on_grader_error(cases, grader_error)
         s.result(f"Submitted the {label}: {sum(c.passed for c in cases)}/{len(cases)} passed")
     return cases
+
+
+def _wait_for_results(container: Container, after: float) -> dict:
+    """The cases of the Submit that finishes after ``after`` (a results-file time)."""
+    import json
+
+    deadline = time.time() + SUBMIT_WAIT_SECONDS
+    while time.time() < deadline:
+        if (container.status().get("last_submit_at") or 0) > after:
+            return json.loads(container.logs("results").get("text") or "{}").get("test_cases", {})
+        time.sleep(5)
+    raise PraxisError(f"The grader wrote no results within {SUBMIT_WAIT_SECONDS}s. See `codepraxis logs <q> grader`.")
 
 
 def print_cases(cases: list[Case], visible: int | None = None) -> None:

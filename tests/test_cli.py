@@ -56,6 +56,12 @@ class FakeContainer:
     def submit(self, version_id):
         return self.submits.pop(0)(self.files)
 
+    def status(self):
+        return {"last_submit_at": getattr(self, "results_at", 0)}
+
+    def logs(self, source, tail=200):
+        return {"text": getattr(self, "results_text", "{}")}
+
     def exec(self, command, timeout_s=120):
         self.execs = getattr(self, "execs", []) + [command]
         return {"exit_code": 0, "stdout": "", "stderr": "", "seconds": 1}
@@ -342,4 +348,33 @@ class TestRerunningSetup:
         assert "/praxis/" not in command
         assert command.startswith("bash -s -- invoice_rerun <<'CODEPRAXIS_SETUP_SH_END'")
         assert "pip install x" in command
+
+
+class TestASubmitThatWasCutOff:
+    def test_the_results_file_is_read_once_the_grader_finishes(self, tmp_path, monkeypatch):
+        from codepraxis.platform import HttpError
+
+        monkeypatch.setattr(coding.time, "sleep", lambda s: None)
+        container = FakeContainer({})
+
+        def cut_off(files):
+            container.results_at = 100
+            container.results_text = json.dumps({"test_cases": {"test_case_1": {"status": "PASS"}}})
+            raise HttpError("GET /uvi/submit failed (500): WebSocket connection closed: keepalive ping timeout", 500)
+
+        container.submits = [cut_off]
+        cases = coding.submit(container, 7, "solution")
+        assert [c.passed for c in cases] == [True]
+
+    def test_any_other_failure_is_not_waited_out(self):
+        from codepraxis.platform import HttpError
+
+        container = FakeContainer({})
+
+        def broken(files):
+            raise HttpError("GET /uvi/submit failed (500): something else", 500)
+
+        container.submits = [broken]
+        with pytest.raises(HttpError):
+            coding.submit(container, 7, "solution")
 
