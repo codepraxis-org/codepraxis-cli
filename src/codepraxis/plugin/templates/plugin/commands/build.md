@@ -1,146 +1,89 @@
 ---
-description: Build an approved CodePraxis question and fix what fails
-argument-hint: "[question name]"
+description: Build a CodePraxis question inside its live container
+argument-hint: "<question slug>"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(codepraxis:*)
 ---
 
-Build the question `$1` from its approved plan.
+Build the question `$1`.
 
-## Before anything else
+Read `challenges/$1/spec.md` and follow it; do not redesign it. If the spec is
+wrong about something, say so and ask. Read the output file for its type:
+`question-coding/output.md` for `coding` and `coding-ai` questions,
+`question-interview/output.md` for `interview`. It lists the files to produce
+and the rules they follow.
 
-Read `challenges/$1/spec.md`. If it does not exist, or its frontmatter does not
-say `status: approved`, **stop**. Tell them to run `/codepraxis:plan` first, or
-`codepraxis approve $1` if the plan is already written. Do not build from an
-unapproved plan, and do not offer to approve it yourself, approval is theirs.
+## API key
 
-The spec is the specification. Do not redesign it while implementing. If you hit
-something it got wrong, say so and ask, rather than quietly deciding.
+The CLI reads the key from `CODEPRAXIS_API_KEY`. If a command says the key is
+missing, ask the author: "Please give your CodePraxis API key", then set it for
+the session and carry on.
 
-## Scaffold, then fill in
+## Reading the CLI's output
 
-```bash
-codepraxis new $1
-```
+Every command prints each stage as it goes: `→` when a stage starts, `✓` or `✗`
+when it ends (with how long it took), `…` lines while it waits (with what it is
+waiting for and the latest thing it saw), `!` for a warning, and a final
+`Next:` line. Relay the stage the author is at when a command is slow, and read
+the `✗` line and the log it points to before changing anything.
 
-That writes a complete, already-passing question so you start from something
-green:
+## Coding questions
 
-```
-challenges/$1/
-  spec.md
-  pack/
-    metadata.json      backend.conf      setup.sh
-    source/            what the candidate starts from
-    ._tests/test_1.py  the testCases class
-    ._course_data/     course_toc.json and feature.md
-  solution/            the reference answer, never uploaded
-```
+Everything runs in the question's container, never on this machine. It is an
+ordinary candidate container, so what works there works for candidates.
 
-Then replace the placeholder content with the real question:
+1. **Write the files** that `output.md` lists, locally under `challenges/$1/`.
+2. **Push:** `codepraxis push $1` saves the question to the platform. The
+   first push creates it as a draft; later pushes update the same draft.
+3. **Launch:** `codepraxis launch $1` opens it in a container, the way the
+   website does, and waits for `setup.sh`. A cold start can take a few
+   minutes; `setup.sh` itself must finish within 2 minutes, or launch stops
+   with its last lines. It prints the container's URL: the candidate's view.
+   It then sends any local files that differ, so the container always matches
+   your question (a re-pushed draft keeps its version id, and a container that
+   already had the question, or restored your earlier workspace, keeps its
+   files).
+4. **Try it:** `codepraxis exec $1 "<command>"` runs a command in the
+   workspace as the candidate user (`--timeout 600` for slow ones). Use it to
+   run the starter, query a database, check a file.
+5. **Run the visible cases:** `codepraxis test $1 --visible`, the candidate's
+   Run button. It prints each case's Input, Expected and Output.
+6. Edit and repeat 4 and 5. `exec` and `test` first send the files you changed
+   to the container, so each loop takes seconds; there is no need to push or
+   launch again. A changed `setup.sh` is rerun, within the same 2 minutes.
+7. **Push** again whenever you want the platform's copy to match.
 
-- **`pack/._course_data/feature.md`** the brief. Scenario, exact invocation,
-  output contract, a worked example, and what is evaluated. Precise about the
-  contract, silent about the approach.
-- **`pack/source/`** the starting state the spec describes, plus a README
-  saying what is broken and how to run it. No working implementation.
-- **`pack/._tests/test_1.py`** the case table from the spec, in order, with
-  the visible ones first.
-- **`solution/`** the reference answer. It overlays `source/`, so mirror those
-  paths.
-- **`pack/setup.sh`** only if dependencies are needed, with pinned versions.
+When something fails, read the log before guessing:
 
-The `pack-contract` skill has the `testCases` rules. Follow it exactly; those
-constraints come from the runner, not from taste.
+| Command | Shows |
+|---|---|
+| `codepraxis logs $1 setup` | `setup.sh`'s output and exit code, both runs (the candidate's, and root's prefixed `setup.sh (root):`) |
+| `codepraxis logs $1 grader` | The grader's own output: a case that raised, a timeout, a grader that didn't load |
+| `codepraxis logs $1 exec` | Every `exec` command and its output |
+| `codepraxis logs $1 run` | The last Run's cases, as the candidate's panel shows them |
+| `codepraxis logs $1 results` | The last Submit's full result |
 
-## Then argue with your own work
+Credentials are replaced by `[redacted]` in everything the container returns.
 
-Run `codepraxis validate $1` and iterate until it passes. Then check the things
-validation cannot, and fix what you find:
+The container is reclaimed after 30 idle minutes; `launch` again opens a new
+one. `codepraxis stop $1` hands it back early. To start from what is saved on
+the platform, `codepraxis pull $1` (or `codepraxis pull <id>`) overwrites the
+local files, solution included.
 
-- **Does the solution actually solve the problem?** If it pattern-matches the
-  test inputs, hardcoding an expected number or name, it proves nothing about
-  whether the question is solvable. Rewrite it to do the real work. This is the
-  single most common way a question ships broken.
-- **Does the starter fail for the right reason?** It must fail because the work
-  is missing, not because of a syntax error or a bad import.
-- **Does every case discriminate?** If two fail for the same reason, cut one.
-- **Does the brief match the files?** Every path it names must exist in
-  `source/`. Renaming a file and leaving the brief pointing at the old name is
-  a real bug that reaches candidates.
-- **Does any hidden case test something the brief never states?**
-- **Do the visible cases run in seconds?** They are re-run constantly.
+## Interview questions
 
-Only report to the user when it passes, or when you are genuinely stuck. Do not
-narrate each fix.
+There is no container. Write `question.json` and put the files it shows in
+`entities/`. Run `codepraxis test $1`: it uploads new or changed files and runs
+the platform's checks. Fix every blocker, then `codepraxis push $1`.
 
-## Then run it once on the real image
+## Before you stop
 
-```bash
-codepraxis validate $1 --remote
-```
+- The solution does the real work. Nothing hardcodes an expected value.
+- The starter runs and fails because work is missing, not because of a syntax
+  error or a bad import.
+- Every file the brief names exists in `source/`.
+- No hidden case tests a rule the brief never states.
+- The visible cases finish in seconds, and `setup.sh` in under 2 minutes.
 
-**Do this here, not at publish time.** It costs about a minute and it is the
-only thing that catches the class of bug local validation cannot see:
-
-- The runner is **Python 3.10**. Anything newer is a trap, and some of it is
-  semantic rather than syntactic, `Union[X, X]` collapses on 3.12+ and raises
-  `TypeError` on 3.10, so neither lint nor a local run finds it.
-- `setup.sh` is not executed locally at all.
-- Three of koro's four test modes cannot be judged locally.
-- A subprocess in the container gets a different Python than your test module.
-
-Skipping it does not avoid the cost, it defers it: the first remote run then
-happens inside `ship`, which waits up to fifteen minutes and is a far worse
-place to discover a missing package.
-
-Say it is running and that it takes about a minute. A remote failure here is a
-build failure, fix it and re-run, rather than carrying it into publishing.
-
-## Then evaluate it
-
-Validation says it runs. It does not say the question is any good.
-
-Invoke the `question-evaluation` skill. The pack exists now, so the full review
-applies and the simulation is measurable: a **clean subagent**, not you, you
-have seen the solution, writes an attempt to `challenges/$1/.attempt/`, and
-`codepraxis validate $1 --fixture attempt` scores it against the real cases.
-
-The review costs nothing, always do it. The simulation costs minutes, so:
-
-**Don't repeat it.** If `challenges/$1/evaluation.md` already exists and the
-pack has not meaningfully changed since, a typo in the brief does not count, 
-reuse that number and say you are reusing it. Rebuilds are common; re-measuring
-an unchanged question just spends someone's afternoon confirming what is
-already written down.
-
-**Announce it, then let them decline.** One line before it starts: what it is
-doing, roughly how long, and that they can skip it. Something like *"Running
-the AI-resistance check, a fresh model attempts this cold, takes a few
-minutes. Say skip if you'd rather not."*
-
-Default to running it. If they skip, say plainly what that costs: `difficulty`
-stays an estimate, and nobody knows whether the question survives a candidate
-with an agent until someone checks. Note it in `evaluation.md` as not measured
-rather than leaving the field looking authoritative.
-
-Run it once and wait. Do not chain a second attempt at a revised framing in the
-same pass. That is another several minutes, and the revision can be measured
-on the next build.
-
-That prints `MEASURED the attempt passed N/M cases`. Fewer is better: it means
-the question is not answerable from the brief alone. If a model passes most of
-them, say so plainly, the question needs work, whatever validation says.
-
-Write `challenges/$1/evaluation.md`, and update the spec's `difficulty` and
-`ai_solvability` from what was measured rather than what was guessed.
-
-## When it passes
-
-Say what was built, what each case catches, and how long you expect it to take.
-Give the evaluation verdict in one line. Then hand over:
-
-```
-/codepraxis:try $1
-```
-
-Do not publish. Shipping is a separate, deliberate step.
+Report only when the visible cases pass in the container (or, for an
+interview, when `test` shows no blockers), or when you are genuinely stuck. Do
+not narrate each fix. Then: `/codepraxis:test $1`.
