@@ -199,9 +199,12 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
         return "a cold start can take up to 3 minutes" if elapsed < 180 else "longer than a usual cold start"
 
     with progress.step(f"Opening challenge {challenge_id} in a container", waiting=waiting) as s:
-        def retrying(attempt: int, exc: Exception) -> None:
-            s.note(f"request {attempt} was cut off ({str(exc)[:80]}); the platform is still starting "
-                   "the container, asking again in 15s")
+        def retrying(attempt: int, exc: Exception, wait: float) -> None:
+            if getattr(exc, "status", 0) == 503:
+                s.note(f"the container is still starting; asking again in {wait:g}s")
+            else:
+                s.note(f"request {attempt} was cut off ({str(exc)[:80]}); the platform is still starting "
+                       f"the container, asking again in {wait:g}s")
 
         opened = backend.open_challenge(int(challenge_id), on_retry=retrying)
         folder = opened.get("folder") or q.folder_name()

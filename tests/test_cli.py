@@ -431,3 +431,46 @@ class TestRerunningSetupOnANewImage:
         assert container.setup_reruns == 1
         assert not getattr(container, "execs", [])
 
+
+
+class TestOpenChallengeWaitsThroughAColdStart:
+    """The backend answers 503 while a container starts; a proxy cut-off is 500/502/504."""
+
+    def _backend(self, monkeypatch, replies):
+        backend = platform.Backend(key="sk_test", url="https://api.example")
+        calls, sleeps = [], []
+
+        def fake_call(method, path, **kwargs):
+            calls.append(path)
+            reply = replies.pop(0)
+            if isinstance(reply, Exception):
+                raise reply
+            return reply
+
+        monkeypatch.setattr(backend, "_call", fake_call)
+        monkeypatch.setattr(platform.time, "sleep", sleeps.append)
+        return backend, calls, sleeps
+
+    def test_503_still_starting_is_retried_after_five_seconds(self, monkeypatch):
+        opened = {"base_url": "https://c", "folder": "q", "challenge_version_id": 11}
+        starting = platform.HttpError("still starting", 503)
+        backend, calls, sleeps = self._backend(monkeypatch, [starting, starting, opened])
+        notes = []
+
+        assert backend.open_challenge(7, on_retry=lambda a, e, w: notes.append(w)) == opened
+        assert calls == ["/challenges/7/open"] * 3
+        assert sleeps == [5, 5] and notes == [5, 5]
+
+    def test_proxy_cut_off_still_waits_fifteen_seconds(self, monkeypatch):
+        opened = {"base_url": "https://c", "folder": "q", "challenge_version_id": 11}
+        backend, _, sleeps = self._backend(monkeypatch, [platform.HttpError("cut off", 504), opened])
+
+        assert backend.open_challenge(7) == opened
+        assert sleeps == [15]
+
+    def test_client_error_is_not_retried(self, monkeypatch):
+        backend, calls, sleeps = self._backend(monkeypatch, [platform.HttpError("forbidden", 403)])
+
+        with pytest.raises(platform.HttpError):
+            backend.open_challenge(7)
+        assert calls == ["/challenges/7/open"] and sleeps == []

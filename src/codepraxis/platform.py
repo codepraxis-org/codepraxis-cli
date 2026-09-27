@@ -166,14 +166,19 @@ class Backend:
 
     #: How long launch keeps asking while the platform starts a container.
     OPEN_DEADLINE_SECONDS = 480
+    #: Wait after a 503: the backend's "still starting, ask again" (it sends Retry-After: 5).
+    OPEN_STARTING_RETRY_SECONDS = 5
+    #: Wait after a proxy cut-off (500/502/504) or an unreachable backend.
+    OPEN_CUT_OFF_RETRY_SECONDS = 15
 
     def open_challenge(self, challenge_id: int, on_retry=None) -> dict:
         """Open a question in the key owner's container.
 
-        A cold start can take minutes, but the website's proxy cuts any request
-        off at 45 seconds (it answers 500, 502 or 504) while the backend carries
-        on starting the container. Asking again is safe: the backend reuses the
-        container it is preparing, and answers quickly once it is ready.
+        A cold start can take minutes. The backend answers 503 while the container
+        is still starting, and the website's proxy cuts any request off at 45 seconds
+        (it answers 500, 502 or 504) while the backend carries on. Asking again is
+        safe: the backend reuses the container it is preparing, and answers quickly
+        once it is ready. ``on_retry(attempt, exc, wait_seconds)`` is told each wait.
         """
         deadline = time.time() + self.OPEN_DEADLINE_SECONDS
         attempt = 0
@@ -182,12 +187,14 @@ class Backend:
             try:
                 return self._call("POST", f"/challenges/{challenge_id}/open", timeout=120)
             except (HttpError, Unreachable) as exc:
-                cut_off = isinstance(exc, Unreachable) or getattr(exc, "status", 0) in (500, 502, 503, 504)
+                status = getattr(exc, "status", 0)
+                cut_off = isinstance(exc, Unreachable) or status in (500, 502, 503, 504)
                 if not cut_off or time.time() > deadline:
                     raise
+                wait = self.OPEN_STARTING_RETRY_SECONDS if status == 503 else self.OPEN_CUT_OFF_RETRY_SECONDS
                 if on_retry:
-                    on_retry(attempt, exc)
-                time.sleep(15)
+                    on_retry(attempt, exc, wait)
+                time.sleep(wait)
 
 
 class Container:
