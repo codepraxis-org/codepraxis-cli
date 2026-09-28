@@ -6,16 +6,21 @@ table), plus any entities it shows. There is no container. You write:
 ```
 challenges/<slug>/
 ├── spec.md
-├── question.json            the question
-└── entities/                files the question shows, if any
+├── question.json                        the question
+└── entities/                            files the question shows, if any
     ├── architecture.png
-    └── loader.sql
+    ├── loader.sql
+    ├── invoice_loader/                  a folder: shown as a repo (explorer + editor)
+    │   ├── README.md
+    │   └── src/loader.py
+    ├── walkthrough.mp4
+    └── walkthrough.mp4.description.md   what the interviewer reads for the video
 ```
 
-`codepraxis push` uploads each file in `entities/`, puts the returned ids
-into `question.json` where the file name is used, and saves the question as a
-**draft**. The author publishes it from the website, which first checks that it
-can run.
+`codepraxis push` uploads each file (and folder) `question.json` names, puts the
+returned ids into `question.json` where the name is used, and saves the question
+as a **draft**. The author publishes it from the website, which first checks that
+it can run.
 
 ## question.json
 
@@ -103,16 +108,21 @@ can run.
 | `answer_key` | no | Open answers: `required_concepts`, `red_flags`, `good_additional_points`. MCQ: `{"mcq_choice": ["a"]}`, the correct choice id or ids |
 | `withheld_solution_parts` | no | Phrases the interviewer must never say about the opening question |
 | `seed_hints` | on request | `[{"id", "text", "entities"}]`; each hint used lowers the score |
+| `seed_highlights` | yes | Lines lit up when the question opens: `[{"file": "loader.sql", "lines": [88, 110]}]`, with `"path"` for a file inside a repo |
 | `max_probes` | no | How many probes may fire |
 | `probes` | when fired | The probe tree (below) |
 
 Each **probe** is `{id, description, solution, withheld_solution_parts, hints,
-duration, entities, next}`:
+duration, entities, editable, highlights, next}`:
 
 - `id`: a number, unique among its siblings.
 - `description`: what the candidate is asked when it fires.
 - `solution`: what a good answer contains, written for the interviewer.
-- `entities`: file names shown when this probe fires.
+- `entities`: file names shown when this probe fires. They join the files already
+  on screen; nothing shown earlier disappears.
+- `editable`: which of this probe's own `entities` the candidate may edit.
+- `highlights`: lines lit up when this probe opens, in the `seed_highlights`
+  shape. May point at any file on screen by then, including the opening question's.
 - `next`: the probes one level deeper.
 
 ## Description sections
@@ -158,29 +168,60 @@ question sits beside the Oracle Integration Cloud coding questions.
 
 ## Entities
 
-Files the candidate is shown. Each one is converted to text so the interviewer
-can read it too.
+Files the candidate is shown, as tabs across the top of the file pane (like an
+editor), each named by its file name. **Name files neutrally**: the candidate
+sees the names, so never `bug_is_here.sql`.
 
-| Type | Files | Shown as |
+| What you put in `entities/` | Type | The candidate sees |
 |---|---|---|
-| `markdown` | `.md` | Formatted text |
-| `code` | `.py`, `.sql`, `.js`, … | Code with highlighting |
-| `image` | `.png`, `.jpg` | An image (the interviewer reads a description of it) |
-| `pdf` | `.pdf` | A link that opens the document |
-| `doc` | `.docx` | A link that opens the document |
-| `excalidraw` | `.excalidraw` | A whiteboard drawing; with `"editable": true` the candidate draws on it and their version is saved as their answer |
+| `.py`, `.sql`, `.js`, `.log`, any other text | `code` | Monaco editor with colouring and line numbers |
+| A **folder** | `repo` | An explorer beside the editor, each open file a tab |
+| `.md` | `markdown` | Rendered, with a Source view for picking lines |
+| `.png`, `.jpg`, `.gif`, `.webp` | `image` | The image, fitted; a click zooms |
+| `.pdf` | `pdf` | The PDF inside its tab |
+| `.pptx`, `.ppt`, `.docx`, `.doc` | converted to `pdf` | The PDF. `push` converts with LibreOffice; without it, slides are refused and Word goes up as a download link |
+| `.mp4`, `.mov`, `.webm` | `video` | A player |
+| `.mp3`, `.wav`, `.m4a`, `.ogg` | `audio` | A player |
+| `.excalidraw` | `excalidraw` | A diagram they can pan and zoom |
 
-**Several code files** work: attach each file as its own `code` entity, in the
-order the candidate should read them.
+**Where files appear.** On the opening question (`entity_refs`), on a probe
+(`entities`, shown when it fires) or on a hint (`entities`, shown when it's given,
+on a tab marked **Hint**). Once shown, a file stays for the rest of the question,
+and a file that arrives mid-question is marked New and opened. Refer to files by
+their name in `entities/`; `push` swaps in the ids.
 
-**Not usable yet: video, audio and slide decks.** The platform has no way to
-turn them into text for the interviewer, so a question that uses one can't be
-published. Until that lands, export slides to PDF and describe a recording in
-markdown.
+**Descriptions.** The interviewer never sees a file, only a text version of it:
+code and markdown as they are, a PDF's text, an image described by a vision model,
+a repo as its file list then every file. To write that text yourself, put
+`<name>.description.md` beside the file (or folder). It replaces the automatic
+text. **Audio and video need one**: nothing can read them, so `push` refuses a
+recording without a description. Describe what is seen as well as what is said.
 
-An entity can be attached to the opening question (`entity_refs`), to a probe
-(shown when it fires) or to a hint (shown when it's used). In `question.json`,
-refer to entities by their file name in `entities/`; `push` swaps in the ids.
+**Repos.** At most 200 text files and 500 KB of text between them; `push` refuses
+a bigger folder, and so does the platform. `.git`, `node_modules`, caches and
+binary files are left out. The interviewer reads the whole repo on every turn of
+a stage that shows it, so keep only what the question needs.
+
+**Read-only or editable.** Every file is read-only unless marked: `"editable":
+true` on an `entity_refs` entry, or its name in a probe's `editable` list. Only
+code, markdown, repos and diagrams can be editable.
+
+- An editable code file, markdown file or repo is typed into, and the
+  candidate's version goes with their next answer. The interviewer reads their
+  version from then on, marked as the candidate's.
+- An editable `.excalidraw` on a `draw-probe` question is where the whiteboard
+  starts: they draw on your diagram rather than a blank canvas, and their drawing
+  is read as a revision of it.
+
+**Attaching lines.** In any text file, read-only or not, the candidate can select
+lines and **Attach to answer**. The lines go with their answer labelled with the
+file and line numbers, so the interviewer knows exactly what "this" means.
+
+**Highlights.** `seed_highlights` and a probe's `highlights` light up line ranges
+when that stage opens, and bring their file to the front. Use them to point at
+what a stage is about without saying it. Lines are 1-based and inclusive; a file
+in a repo needs `"path"`. The interviewer can also highlight lines while it
+talks (the screen supports it); it will once its prompt is given the ability.
 
 ## The check
 
@@ -199,7 +240,10 @@ Blockers:
   among siblings; probes deeper than `max_probes`.
 - `mcq`: no choices, no `answer_key.mcq_choice`, or a key naming a choice that
   doesn't exist.
-- An entity the interviewer can't read (video, for now).
+- An entity the interviewer can't read (no text for it).
+- A highlight on a file not on the candidate's screen at that stage, or a range
+  that runs backwards.
+- A probe's `editable` naming a file that probe doesn't show.
 
 Warnings:
 
@@ -207,3 +251,5 @@ Warnings:
 - No hints on the opening question or on a probe.
 - No minutes on the opening question or on a probe.
 - A very short opening question, or choices set on a question that isn't `mcq`.
+- A `withheld_solution_parts` phrase that appears nowhere in that stage's answer
+  key or solution: quote it the way the solution words it.

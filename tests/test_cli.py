@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import base64
 import json
 import zipfile
 from pathlib import Path
@@ -474,3 +475,129 @@ class TestOpenChallengeWaitsThroughAColdStart:
         with pytest.raises(platform.HttpError):
             backend.open_challenge(7)
         assert calls == ["/challenges/7/open"] and sleeps == []
+
+
+# ── interview files: repos, descriptions, conversions, highlights ──────────
+
+def _question_dir(tmp_path, question=None):
+    root = tmp_path / "q"
+    (root / "entities").mkdir(parents=True)
+    (root / "question.json").write_text(json.dumps(question or {}))
+    return root
+
+
+class _RecordingBackend:
+    def __init__(self):
+        self.bodies = []
+
+    def post_json(self, path, payload, timeout=60):
+        self.bodies.append(payload)
+        return {"entity_id": 100 + len(self.bodies)}
+
+
+class TestInterviewFiles:
+    def test_a_folder_is_a_repo_zipped_the_same_way_every_time(self, tmp_path):
+        repo = tmp_path / "invoice_loader"
+        (repo / "src").mkdir(parents=True)
+        (repo / "src" / "loader.py").write_text("print(1)\n")
+        (repo / "README.md").write_text("# loader\n")
+        (repo / ".git").mkdir()
+        (repo / ".git" / "HEAD").write_text("ref")
+        (repo / "logo.png").write_bytes(b"\x89PNG\x00\xff")
+        assert interview.entity_type(repo) == "repo"
+        first, second = interview.zip_repo(repo), interview.zip_repo(repo)
+        assert first == second
+        import zipfile, io as _io
+        assert sorted(zipfile.ZipFile(_io.BytesIO(first)).namelist()) == ["README.md", "src/loader.py"]
+
+    def test_a_repo_over_the_limit_is_refused_before_uploading(self, tmp_path):
+        repo = tmp_path / "big"
+        repo.mkdir()
+        (repo / "a.sql").write_text("x" * (interview.REPO_MAX_TEXT_BYTES + 1))
+        with pytest.raises(PraxisError, match="This repo is too big"):
+            interview.zip_repo(repo)
+
+    def test_a_description_goes_up_with_its_file_and_a_new_one_uploads_again(self, tmp_path):
+        root = _question_dir(tmp_path)
+        (root / "entities" / "demo.mp4").write_bytes(b"\x00\x01")
+        (root / "entities" / "demo.mp4.description.md").write_text("The OPP log filling up.\n")
+        backend = _RecordingBackend()
+        q = Question(root)
+        assert interview.upload_entities(q, backend, {"demo.mp4"}) == {"demo.mp4": 101}
+        assert interview.upload_entities(q, backend, {"demo.mp4"}) == {"demo.mp4": 101}
+        (root / "entities" / "demo.mp4.description.md").write_text("The OPP log, then the heap error.\n")
+        assert interview.upload_entities(q, backend, {"demo.mp4"}) == {"demo.mp4": 102}
+        first = backend.bodies[0]
+        assert first["type"] == "video" and first["normalized_form"] == "The OPP log filling up."
+        assert first["meta"] == {"filename": "demo.mp4", "content_type": "video/mp4"}
+
+    def test_audio_and_video_need_a_description(self, tmp_path):
+        root = _question_dir(tmp_path)
+        (root / "entities" / "call.mp3").write_bytes(b"ID3")
+        with pytest.raises(PraxisError, match="call.mp3.description.md"):
+            interview.upload_entities(Question(root), _RecordingBackend(), {"call.mp3"})
+
+    def test_slides_need_libreoffice_and_word_falls_back_to_a_link(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(interview, "_soffice", lambda: None)
+        root = _question_dir(tmp_path)
+        (root / "entities" / "deck.pptx").write_bytes(b"PK")
+        (root / "entities" / "spec.docx").write_bytes(b"PK")
+        with pytest.raises(PraxisError, match="slides are shown as a PDF"):
+            interview.upload_entities(Question(root), _RecordingBackend(), {"deck.pptx"})
+        backend = _RecordingBackend()
+        interview.upload_entities(Question(root), backend, {"spec.docx"})
+        assert backend.bodies[0]["type"] == "doc"
+
+    def test_a_converted_file_goes_up_as_a_pdf(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(interview, "convert_to_pdf", lambda path: b"%PDF-1.7")
+        root = _question_dir(tmp_path)
+        (root / "entities" / "deck.pptx").write_bytes(b"PK")
+        backend = _RecordingBackend()
+        interview.upload_entities(Question(root), backend, {"deck.pptx"})
+        body = backend.bodies[0]
+        assert body["type"] == "pdf" and body["meta"]["filename"] == "deck.pdf"
+        assert body["meta"]["converted_from"] == "deck.pptx"
+
+    def test_highlights_and_editable_files_are_written_by_name_and_sent_by_id(self):
+        question = {
+            "entity_refs": [{"file": "loader.sql"}],
+            "seed_highlights": [{"file": "loader.sql", "lines": [88, 110]}],
+            "probes": [{"id": 1, "description": "d", "entities": ["repo"], "editable": ["repo"],
+                        "highlights": [{"file": "repo", "path": "src/a.py", "lines": [3, 3]}]}],
+        }
+        ids = {"loader.sql": 1, "repo": 2}
+        out = interview.with_entity_ids(question, ids)
+        assert out["seed_highlights"] == [{"entity_id": 1, "start_line": 88, "end_line": 110}]
+        assert out["probes"][0]["editable"] == [2]
+        assert out["probes"][0]["highlights"] == [{"entity_id": 2, "start_line": 3, "end_line": 3, "path": "src/a.py"}]
+        back = interview.with_file_names(out, {v: k for k, v in ids.items()})
+        assert back["seed_highlights"] == [{"file": "loader.sql", "lines": [88, 110]}]
+        assert back["probes"][0]["editable"] == ["repo"]
+        assert back["probes"][0]["highlights"] == [{"file": "repo", "lines": [3, 3], "path": "src/a.py"}]
+
+    def test_a_highlight_on_a_file_the_question_does_not_show_is_named(self):
+        with pytest.raises(PraxisError, match="ghost.sql"):
+            interview.with_entity_ids({"seed_highlights": [{"file": "ghost.sql", "lines": [1, 2]}]}, {})
+
+    def test_a_pulled_repo_comes_back_as_its_folder_with_its_description(self, tmp_path):
+        import zipfile, io as _io
+        buffer = _io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("src/a.py", "a = 1\n")
+
+        class PullBackend:
+            def get(self, path):
+                return {"question": {"entity_refs": [{"id": 5, "editable": True}]}, "entities": [{
+                    "entity_id": 5, "type": "repo", "filename": "invoice_loader",
+                    "content_base64": base64.b64encode(buffer.getvalue()).decode(),
+                    "description": "The loader.",
+                }]}
+
+        q = interview.pull(PullBackend(), 487, tmp_path / "pulled")
+        assert (tmp_path / "pulled" / "entities" / "invoice_loader" / "src" / "a.py").read_text() == "a = 1\n"
+        assert (tmp_path / "pulled" / "entities" / "invoice_loader.description.md").read_text().strip() == "The loader."
+        assert json.loads((tmp_path / "pulled" / "question.json").read_text())["entity_refs"] == [
+            {"file": "invoice_loader", "editable": True}
+        ]
+        # Pushing straight back uploads nothing.
+        assert interview.upload_entities(q, _RecordingBackend(), {"invoice_loader"}) == {"invoice_loader": 5}

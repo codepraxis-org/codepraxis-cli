@@ -35,31 +35,43 @@ measuring is **whether their experience is real and how deep it goes**.
 A question is stronger when the candidate works from something concrete
 instead of a description. Use these whenever they fit:
 
-**What you can show them** (entities, attached to the opening question, a
-probe or a hint):
+**What you can show them** (files, on the opening question, a probe or a hint).
+They open as tabs, like an editor, and stay for the rest of the question:
 
-- **Code, one file or several:** "Here's the loader a junior wrote. What would
-  you change before it goes live?"
-- **A diagram or screenshot (image):** "This is the integration's architecture.
+- **Code, one file:** "Here's the loader a junior wrote. What would you change
+  before it goes live?" Shown in a real editor.
+- **A repo (a folder):** a small codebase with an explorer, when the question is
+  about how pieces fit together.
+- **A screenshot or diagram (image):** "This is the integration's architecture.
   Where would you expect it to fail under load?"
-- **A PDF or Word document:** a design document, a log extract, a runbook, a
-  spec to critique.
-- **Markdown:** a ticket, an incident timeline, a table of numbers.
-- **A whiteboard drawing:** a diagram they can read, or complete themselves.
+- **A PDF, slides or a Word document:** a design document, a runbook, a spec to
+  critique. Slides and Word are converted to PDF on push.
+- **Markdown or a log:** a ticket, an incident timeline, a table of numbers.
+- **Audio or video:** a support call, a screen recording. Write what it shows in
+  a description beside it: that is all the interviewer can know of it.
+- **A whiteboard drawing:** a diagram they read, or one they start drawing from.
+
+**Point at what matters:** highlight lines per stage, so a probe can say "look
+here" without saying why. A probe's files and highlights arrive together, and the
+file comes to the front.
 
 **How they can answer:**
 
 - **Typing** in the chat (`open-probe`), which is the default.
+- **Attaching lines:** they select lines in any file and attach them, so "this
+  line" is exact. Nothing to set up; it is always available.
+- **Editing a file** you mark editable: "fix this function", "add the missing
+  guard". Their version goes with the answer and the interviewer reads it.
 - **Drawing** on a whiteboard and explaining it (`draw-probe`), for design and
-  architecture questions. You can give them a starting drawing to extend.
+  architecture questions. Mark a diagram editable to have them start from it.
 - **Picking a choice** (`mcq`) is **not available yet**: the interview does not
   show the choices to the candidate. Don't write `mcq` questions. For a
   multiple-choice knowledge check, add the questions to an MCQ question bank
   and turn on the template's Knowledge check round instead.
 
-Mixing them works well: show a diagram in the opening question, then have them
-draw the fix in a probe. Video, audio and slide decks can't be used yet: export
-slides to PDF, and describe a recording in markdown.
+Mixing them works well: show code in the opening question, highlight the lines a
+probe is about, give a log file with the probe, and have them edit the fix. See
+`output.md` for how each is written.
 
 ## Rules every question follows
 
