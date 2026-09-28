@@ -7,6 +7,7 @@ table), plus any entities it shows. There is no container. You write:
 challenges/<slug>/
 ├── spec.md
 ├── question.json                        the question
+├── entity-src/make_entities.py          makes every file in entities/ (see "Making the files")
 └── entities/                            files the question shows, if any
     ├── architecture.png
     ├── loader.sql
@@ -222,6 +223,39 @@ when that stage opens, and bring their file to the front. Use them to point at
 what a stage is about without saying it. Lines are 1-based and inclusive; a file
 in a repo needs `"path"`. The interviewer can also highlight lines while it
 talks (the screen supports it); it will once its prompt is given the ability.
+
+## Making the files
+
+Generate every file in `entities/` from one script, `entity-src/make_entities.py`,
+so numbers agree across files and a fix is one edit and a rerun:
+
+- Derive each number once (simulate the runs, the eval, the bill) and write every
+  file from those values. `assert` the invariants: totals add up, percentages match
+  their counts, the chart and the CSV agree, the dates fall on the weekdays you say.
+- Keep it deterministic (fixed seeds), so a rerun re-uploads only what changed.
+- Use the helpers in `codepraxis.exhibits` (standard library only; they call Chrome,
+  ffmpeg and a text-to-speech command when you use them):
+
+  ```python
+  from codepraxis.exhibits import write, html_to_png, html_to_pdf, frames_to_video, dialogue_to_audio, MAC_VOICES
+
+  write(OUT / "incident.log", log_text)
+  html_to_png(dashboard_html, OUT / "dashboard.png", 1200, 700)      # a screen, a slide, a diagram
+  html_to_pdf(report_html, OUT / "report.pdf")                        # text the interviewer can read
+  frames_to_video([(frame1_html, 3), (frame2_html, 4)], OUT / "replay.mp4")
+  dialogue_to_audio([(MAC_VOICES["uk_male"], "Thanks for joining."),
+                     (MAC_VOICES["us_female"], "Happy to.")], OUT / "call.m4a")
+  ```
+
+  Draw charts with any library (matplotlib works well) and save the PNG.
+- **Look at every image** before you push: legible at about 1000 px wide, nothing
+  overflowing or clipped, no large empty areas. Read every PDF page.
+- **Describe every image, audio and video** in `<file>.description.md` with every
+  number, label and relationship the question depends on; the interviewer reads
+  nothing else. For audio, the full transcript with who speaks; for video, what
+  happens with timestamps.
+- Realistic formats: real log lines, real stack traces, real diff headers, real YAML.
+  Trim long files and say so in the file (`[... 412 lines not shown ...]`).
 
 ## The check
 
