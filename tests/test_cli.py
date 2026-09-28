@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import io
 import base64
+import io
 import json
 import zipfile
 from pathlib import Path
@@ -507,7 +507,8 @@ class TestInterviewFiles:
         assert interview.entity_type(repo) == "repo"
         first, second = interview.zip_repo(repo), interview.zip_repo(repo)
         assert first == second
-        import zipfile, io as _io
+        import io as _io
+        import zipfile
         assert sorted(zipfile.ZipFile(_io.BytesIO(first)).namelist()) == ["README.md", "src/loader.py"]
 
     def test_a_repo_over_the_limit_is_refused_before_uploading(self, tmp_path):
@@ -580,7 +581,8 @@ class TestInterviewFiles:
             interview.with_entity_ids({"seed_highlights": [{"file": "ghost.sql", "lines": [1, 2]}]}, {})
 
     def test_a_pulled_repo_comes_back_as_its_folder_with_its_description(self, tmp_path):
-        import zipfile, io as _io
+        import io as _io
+        import zipfile
         buffer = _io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
             archive.writestr("src/a.py", "a = 1\n")

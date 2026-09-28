@@ -28,7 +28,6 @@ import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 from . import progress
 from .errors import PraxisError
@@ -83,7 +82,7 @@ def entity_type(path: Path) -> str:
     return _TYPES.get(path.suffix.lower(), "code")
 
 
-def description_for(path: Path) -> Optional[str]:
+def description_for(path: Path) -> str | None:
     """The author's description beside this file or folder, if there is one."""
     beside = path.with_name(path.name + DESCRIPTION_SUFFIX)
     if beside.is_file():
@@ -128,7 +127,7 @@ def zip_repo(folder: Path) -> bytes:
     return buffer.getvalue()
 
 
-def _soffice() -> Optional[str]:
+def _soffice() -> str | None:
     for name in ("soffice", "libreoffice"):
         found = shutil.which(name)
         if found:
@@ -137,7 +136,7 @@ def _soffice() -> Optional[str]:
     return str(mac) if mac.exists() else None
 
 
-def convert_to_pdf(path: Path) -> Optional[bytes]:
+def convert_to_pdf(path: Path) -> bytes | None:
     """The file as a PDF, or None when LibreOffice is not installed."""
     soffice = _soffice()
     if soffice is None:
@@ -157,7 +156,7 @@ def convert_to_pdf(path: Path) -> Optional[bytes]:
         return pdf.read_bytes()
 
 
-def _upload_form(path: Path, source: bytes, description: Optional[str]) -> tuple[str, bytes, dict]:
+def _upload_form(path: Path, source: bytes, description: str | None) -> tuple[str, bytes, dict]:
     """What goes up for one name: its type, its bytes and its meta."""
     suffix = path.suffix.lower()
     if path.is_dir():
