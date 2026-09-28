@@ -28,6 +28,11 @@ can run.
   "seniority": "senior",
   "duration": 15,
   "seed_duration": 5,
+  "description_sections": {
+    "signal": "Can they make a nightly interface safe to rerun, or do they only know the happy path?",
+    "implement": "- **Find why a rerun duplicated invoices**\n- **Make it rerun-safe** without relying on the import",
+    "audience": "**Good for:** senior EBS technical consultants.\n\n**Needs:** PL/SQL, Payables open interface."
+  },
 
   "seed_question": "The nightly program below loads supplier invoices. Last night it failed halfway and operations reran it. This morning 14 invoices exist twice.\n\n**Walk me through how you'd find out why.**",
   "entity_refs": [{"file": "loader.sql", "editable": false}],
@@ -90,6 +95,7 @@ can run.
 | `seniority` | no | The level it's pitched at |
 | `duration` | no | Minutes for the whole question |
 | `seed_duration` | no | Minutes for the opening question before probing starts |
+| `description_sections` | no | The question's page for whoever assembles an interview (below). Never shown to the candidate |
 | `seed_question` | yes | The opening question, in markdown |
 | `entity_refs` | yes | Entities shown with the opening question: `[{"file": "...", "editable": false}]` |
 | `mcq_choices` | yes | `mcq` only: `[{"id": "a", "text": "..."}]`, or `{"id": "a", "file": "..."}` for a choice that is an entity |
@@ -108,6 +114,22 @@ duration, entities, next}`:
 - `solution`: what a good answer contains, written for the interviewer.
 - `entities`: file names shown when this probe fires.
 - `next`: the probes one level deeper.
+
+## Description sections
+
+What the question's page shows to whoever is putting an interview together:
+a few short sections, not the probes or the answer key. Same keys as a coding
+question's `description_sections`, with interview headings:
+
+| Key | Heading | What goes in it |
+|---|---|---|
+| `signal` | What it tests | One sentence |
+| `task` | The question | One or two sentences. Without it the page shows `seed_question` |
+| `starting_state` | What they see | The files, in a sentence: "the data model screenshot, the SQL, last month's output as a PDF" |
+| `implement` | What they're asked | Three or four bullets, one per stage, bold lead words |
+| `audience` | Who to ask it to | `**Good for:**`, `**Needs:**`, `**Worth knowing:**` |
+
+Markdown, short. Don't describe each file's contents: name it.
 
 ## Categories
 
