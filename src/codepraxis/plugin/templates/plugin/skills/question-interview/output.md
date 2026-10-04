@@ -35,9 +35,10 @@ it can run.
   "duration": 15,
   "seed_duration": 5,
   "description_sections": {
-    "signal": "Can they make a nightly interface safe to rerun, or do they only know the happy path?",
-    "implement": "- **Find why a rerun duplicated invoices**\n- **Make it rerun-safe** without relying on the import",
-    "audience": "**Good for:** senior EBS technical consultants.\n\n**Needs:** PL/SQL, Payables open interface."
+    "task": "A nightly program loads supplier invoices into the accounting system. Last night it stopped halfway and was run again, and now 14 invoices exist twice. The candidate finds out why and makes the program safe to run again.",
+    "starting_state": "- The program's code\n- Later: the staging table's rows from last night",
+    "implement": "1. Explains why running it again made duplicates, using the code. *(5 min)*\n2. Changes the program so a second run can't add an invoice twice. *(5 min)*\n3. Says how they would check last night's damage and clean it up. *(5 min)*",
+    "audience": "Senior Oracle EBS technical consultants who write PL/SQL interfaces. Knowing the Payables open interface helps."
   },
 
   "seed_question": "The nightly program below loads supplier invoices. Last night it failed halfway and operations reran it. This morning 14 invoices exist twice.\n\n**Walk me through how you'd find out why.**",
@@ -128,19 +129,27 @@ duration, entities, editable, highlights, next}`:
 
 ## Description sections
 
-What the question's page shows to whoever is putting an interview together:
-a few short sections, not the probes or the answer key. Same keys as a coding
-question's `description_sections`, with interview headings:
+The question's page for whoever puts an interview together: **recruiters first,
+hiring managers second**. Assume they have no context. Never shown to the
+candidate. The example `question.json` above shows all four keys.
 
-| Key | Heading | What goes in it |
+| Key | Shown as | What goes in it |
 |---|---|---|
-| `signal` | What it tests | One sentence |
-| `task` | The question | One or two sentences. Without it the page shows `seed_question` |
-| `starting_state` | What they see | The files, in a sentence: "the data model screenshot, the SQL, last month's output as a PDF" |
-| `implement` | What they're asked | Three or four bullets, one per stage, bold lead words |
-| `audience` | Who to ask it to | `**Good for:**`, `**Needs:**`, `**Worth knowing:**` |
+| `task` | The problem, no heading | 2–4 plain sentences: what is broken or needed, and what the candidate must do about it. A problem statement, not a story |
+| `starting_state` | What the candidate sees | Bullets, one per file, named for what it is ("a drawing of how the two systems talk"). Files that arrive later go on a `- Later: …` bullet |
+| `implement` | What the candidate does (N minutes) | A numbered list, one step per stage (opening question, then each probe), each ending with its minutes: `*(4 min)*` |
+| `audience` | Who it's for | One line: role and level, then what helps to know |
 
-Markdown, short. Don't describe each file's contents: name it.
+Write it like this:
+
+- Very plain English. Short sentences, one idea each.
+- Everyday words. A technical word only when needed, explained the first time
+  ("Dynamics 365, the company's accounting software").
+- Zero information loss: name every file and every step.
+- No answer, and no hint at the answer.
+- Don't open on the company ("Brasswick sells…") or a person; open on the problem.
+
+`signal` is no longer shown; leave it out.
 
 ## Categories
 

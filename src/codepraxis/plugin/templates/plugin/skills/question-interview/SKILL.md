@@ -172,3 +172,5 @@ candidate can read about a page, a chart and a short log in 4 minutes.
 - [ ] Every probe adds at least one file.
 - [ ] Every probe has an answer a senior person would give.
 - [ ] It fits the time table above.
+- [ ] The page (`description_sections`) is plain English a recruiter follows with no
+      context: the problem, what they see, numbered steps with minutes, who it's for.
