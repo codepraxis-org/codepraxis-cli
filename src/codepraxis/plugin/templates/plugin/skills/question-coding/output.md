@@ -315,6 +315,51 @@ def test_case_3(self, timeout_window=90000, override=1):
 Write both values in the candidate's terms ("13 invoices for 12 documents"),
 never the grader's internals.
 
+### Frontend and full-stack questions
+
+The container has a Chromium the candidate sees as the **Browser** tab in VS Code.
+Inside it, `localhost` is the container. So:
+- the app needs no base path or proxy config;
+- a frontend can call `http://localhost:8000` directly.
+
+Graders use the same browser through `browser`, which the runner provides like
+`execute_bin`:
+
+- `browser.start_app(cmd, port)` starts their app as the candidate and waits
+  for the port. If their dev server is already running on that port, it reuses
+  it. The app is stopped when grading ends.
+- `with browser.open_page(url) as page:` gives a Playwright `Page` in a fresh,
+  private session, separate from the candidate's tab.
+- `browser.screenshot(page, name)` saves a PNG and returns its path.
+- `ai_judge(criteria=..., images=[path])` judges what a page looks like. Use it
+  only for what a selector can't check.
+
+```python
+self.RunCaseInputs = [..., "Add 'milk', then reload the page"]
+
+def test_case_4(self, timeout_window=90000, override=1):
+    expected = "'milk' is still in the list after a reload"
+    try:
+        browser.start_app("npm run dev -- --port 5173 --strictPort", port=5173)
+        with browser.open_page("http://localhost:5173") as page:
+            page.get_by_placeholder("New item").fill("milk")
+            page.get_by_role("button", name="Add").click()
+            page.reload()
+            kept = page.get_by_text("milk").is_visible()
+        actual = expected if kept else "'milk' was gone after a reload"
+        self.msg = "PASS" if kept else actual
+        return expected, actual
+    except Exception as exc:
+        self.msg = f"The app did not start or load: {exc}"
+        return expected, self.msg
+```
+
+- Give browser cases a `timeout_window` of at least 60000. Starting a dev
+  server and the browser takes time.
+- Pin the port and use `--strictPort` (or your framework's equivalent), so the
+  app can't silently move to a port the grader isn't watching.
+- `setup.sh` should run `npm install`, so the grader never waits on it.
+
 ### Choosing an override
 
 - **`0`** when a case is one input and one exact output.
