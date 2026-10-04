@@ -63,8 +63,28 @@ every entity can be read. It lists each **blocker** and **warning** with its
 fix, and exits non-zero if there is any blocker. The website's Publish button
 only refuses unreadable entities, so this is where the rest are caught.
 
+## MCQ banks
+
+```bash
+codepraxis test $1
+```
+
+It runs locally, nothing is uploaded: the platform's rules (type, difficulty 1
+to 5, 2 to 6 options, text or an image per option, `correct` positions, one
+correct for `single_select`, no repeated option text or keys, every image a
+png/jpg/jpeg/gif/webp under `images/`), warnings for unknown keys and for any
+difficulty with fewer than 3 questions, and the count per difficulty. It writes
+`preview.md` and exits non-zero on any error.
+
+Then read `preview.md` as a reviewer: is the ✅ option right, would an expert
+agree it is the only best one, does each distractor come from a real mistake, does
+anything in the wording give the key away, is each image needed to answer, does
+each difficulty match the table in the `question-mcq` skill. Fix `bank.json` and
+test again.
+
 ## Then
 
 Fix what the report shows and rerun until it is clean. Then say in two lines
-what each hidden case catches (or, for an interview, what each probe tests),
+what each hidden case catches (or, for an interview, what each probe tests; for
+an MCQ bank, the count per difficulty and what the questions cover),
 and hand off: `/codepraxis:ship $1`.

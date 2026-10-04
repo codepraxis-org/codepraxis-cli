@@ -5,9 +5,10 @@ The CLI is a thin client. Nothing about a question is executed locally.
 | Module | Does |
 |---|---|
 | `cli.py` | Parses commands and prints results |
-| `question.py` | Finds a question folder, maps its files to container paths, keeps `.codepraxis.json` (the open container, uploaded entity ids) |
+| `question.py` | Finds a question folder (or an MCQ bank under `mcq/`), maps its files to container paths, keeps `.codepraxis.json` (the open container, uploaded entity ids, a bank's id) |
 | `coding.py` | Push and pull, launch (open the container, wait up to 2 minutes for `setup.sh`), sending changed files by hash, Run and Submit, and the starter/solution test |
 | `interview.py` | Uploads entity files once per change, swaps file names for entity ids and back, runs the check, pushes and pulls the question |
+| `mcq.py` | MCQ banks: the server's checks plus image files and depth, `preview.md`, image paths swapped for entity ids and back, push (replaces the bank) and pull |
 | `progress.py` | Stage output: `→` start, `✓`/`✗` end with the time, `…` while waiting |
 | `platform.py` | `Backend` (the public API, with `CODEPRAXIS_API_KEY`) and `Container` (the question's container, called directly) |
 | `plugin/` | The Claude Code plugin, served from this repository by the marketplace manifest |
@@ -23,6 +24,7 @@ Backend, `https://www.codepraxis.co/api/public`, bearer API key:
 - `POST /challenges/{id}/open`: the key owner's container, with the question loaded by the normal setup
 - `DELETE /container`: hand that container back
 - `POST /entities`, `POST /interview-questions`, `POST /interview-questions/check`
+- `POST /question-banks` (push: the whole bank, `id` to replace one; 422 lists every problem), `GET /question-banks/{id}` (pull: the bank with a signed URL per image), `GET /question-banks`
 
 Container, `https://<container>/uvi`, no key:
 

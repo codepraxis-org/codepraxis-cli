@@ -1,16 +1,17 @@
 """The ``codepraxis`` command line.
 
-    codepraxis push    <q>                  save the question to the platform (as a draft)
-    codepraxis pull    <q|id>               get a question back from the platform
+    codepraxis push    <q>                  save the question to the platform (as a draft); a bank is replaced
+    codepraxis pull    <q|id> [--mcq]       get a question (or, with --mcq, a bank) back from the platform
     codepraxis launch  <q> [--fresh]        open it in a container, the way a candidate gets it
     codepraxis exec    <q> "<command>"      run a command there as the candidate (sends changes first)
-    codepraxis test    <q> [--visible]      Run, or the starter/solution check (sends changes first)
+    codepraxis test    <q> [--visible]      Run, or the starter/solution check (sends changes first);
+                                            for an MCQ bank, the local checks and preview.md
     codepraxis logs    <q> [source]         setup, grader, exec, run or results
     codepraxis categories                   the categories a public question can go into
     codepraxis stop    <q>                  hand the container back now
 
 The API key comes from ``CODEPRAXIS_API_KEY``. ``<q>`` is a folder under
-``challenges/``, or a path to one.
+``challenges/`` (or ``mcq/`` for an MCQ bank), or a path to one.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, coding, interview, progress
+from . import __version__, coding, interview, mcq, progress
 from .errors import PraxisError
 from .platform import Backend
 from .plugin import installer
@@ -40,14 +41,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"codepraxis {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
-    cmd = sub.add_parser("push", help="Save the question to the platform (a draft keeps one version).")
+    cmd = sub.add_parser("push", help="Save the question to the platform (a draft keeps one version); "
+                                      "an MCQ bank replaces the bank.")
     cmd.add_argument("question")
     cmd.set_defaults(handler=cmd_push)
 
     cmd = sub.add_parser("pull", help="Get a question back from the platform, solution included.")
-    cmd.add_argument("question", help="A question folder, or a question id.")
-    cmd.add_argument("--interview", action="store_true", help="The id is an AI interview question.")
-    cmd.add_argument("--into", type=Path, help="Folder to write into. Default: challenges/<name>.")
+    cmd.add_argument("question", help="A question or bank folder, or an id.")
+    kind = cmd.add_mutually_exclusive_group()
+    kind.add_argument("--interview", action="store_true", help="The id is an AI interview question.")
+    kind.add_argument("--mcq", action="store_true", help="The id is an MCQ question bank.")
+    cmd.add_argument("--into", type=Path, help="Folder to write into. Default: challenges/<name> "
+                                                "(mcq/<bank name> for a bank).")
     cmd.set_defaults(handler=cmd_pull)
 
     cmd = sub.add_parser("launch", help="Open the pushed question in a container, as a candidate gets it.")
@@ -61,7 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
     cmd.add_argument("--timeout", type=int, default=120, help="Seconds, at most 600. Default 120.")
     cmd.set_defaults(handler=cmd_exec)
 
-    cmd = sub.add_parser("test", help="Coding: Run, or starter-fails/solution-passes. Interview: the checks.")
+    cmd = sub.add_parser("test", help="Coding: Run, or starter-fails/solution-passes. Interview: the checks. "
+                                      "MCQ bank: the local checks, and preview.md.")
     cmd.add_argument("question")
     cmd.add_argument("--visible", action="store_true", help="Only the visible cases (the candidate's Run).")
     cmd.set_defaults(handler=cmd_test)
@@ -91,7 +97,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def cmd_push(args) -> int:
     q = Question.find(args.question)
-    if q.kind == "interview":
+    if q.kind == "mcq":
+        mcq.push(q, Backend())
+        progress.next_step("add the bank to a template's Knowledge check round on the website.")
+    elif q.kind == "interview":
         interview.save(q, Backend())
     else:
         _warn_setup_rules(q)
@@ -104,12 +113,18 @@ def cmd_pull(args) -> int:
     backend = Backend()
     folder = Path(args.question)
     existing = None
-    for candidate in (folder, Path.cwd() / args.question, Path.cwd() / "challenges" / args.question):
+    for candidate in (folder, Path.cwd() / args.question, Path.cwd() / "challenges" / args.question,
+                      Path.cwd() / "mcq" / args.question):
         if candidate.is_dir():
             existing = Question.find(str(candidate))
             break
     if existing is not None:
-        if existing.kind == "interview":
+        if existing.kind == "mcq":
+            bank_id = existing.state().get("bank_id")
+            if not bank_id:
+                raise PraxisError(f"{existing.root / '.codepraxis.json'} has no bank_id: it was never pushed.")
+            mcq.pull(backend, int(bank_id), existing.root)
+        elif existing.kind == "interview":
             question_id = existing.read_question().get("id")
             if not question_id:
                 raise PraxisError(f"{existing.question_json} has no id: it was never pushed.")
@@ -123,7 +138,10 @@ def cmd_pull(args) -> int:
     if not args.question.isdigit():
         raise PraxisError(f"'{args.question}' is neither a question folder nor an id.")
     question_id = int(args.question)
-    if args.interview:
+    if args.mcq:
+        q = mcq.pull(backend, question_id, args.into)
+        progress.next_step(f"`codepraxis test {q.root}` to check it and write preview.md.")
+    elif args.interview:
         interview.pull(backend, question_id, args.into or Path.cwd() / "challenges" / f"interview_{question_id}")
     else:
         coding.pull(backend, question_id, args.into or Path.cwd() / "challenges")
@@ -158,6 +176,13 @@ def cmd_exec(args) -> int:
 
 def cmd_test(args) -> int:
     q = Question.find(args.question)
+    if q.kind == "mcq":
+        if args.visible:
+            raise PraxisError("--visible is for coding questions.")
+        ok = mcq.test(q)
+        progress.next_step(f"review {q.slug}/preview.md, then `codepraxis push {q.slug}`." if ok
+                           else "fix the errors above and test again.")
+        return EXIT_OK if ok else EXIT_FAILED
     if q.kind == "interview":
         if args.visible:
             raise PraxisError("--visible is for coding questions.")

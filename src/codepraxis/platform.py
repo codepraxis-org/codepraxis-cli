@@ -48,9 +48,9 @@ def api_url() -> str:
     return (os.environ.get(ENV_API_URL) or DEFAULT_API_URL).rstrip("/")
 
 
-def website_url() -> str:
+def website_url(api: str | None = None) -> str:
     """The dashboard's base URL, for links printed to the author."""
-    base = api_url()
+    base = (api or api_url()).rstrip("/")
     for suffix in ("/api/public", "/api"):
         if base.endswith(suffix):
             return base[: -len(suffix)]
@@ -58,11 +58,16 @@ def website_url() -> str:
 
 
 class HttpError(PraxisError):
-    """The server answered with an error status."""
+    """The server answered with an error status.
 
-    def __init__(self, message: str, status: int) -> None:
+    ``detail`` is the server's own account, as parsed (a string, a list or a
+    dict such as ``{"problems": [...]}``), for callers that print all of it.
+    """
+
+    def __init__(self, message: str, status: int, detail: Any = None) -> None:
         super().__init__(message)
         self.status = status
+        self.detail = detail
 
 
 class NotFound(HttpError):
@@ -115,14 +120,15 @@ def _http_error(exc: urllib.error.HTTPError, method: str, url: str) -> PraxisErr
             detail = parsed["data"]["errors"]
     except (json.JSONDecodeError, UnicodeDecodeError, OSError, AttributeError):
         pass
+    raw_detail = detail
     if not isinstance(detail, str):
         detail = json.dumps(detail)[:800]
     path = urllib.parse.urlparse(url).path
     if exc.code == 401:
         return HttpError(f"The API key was refused. Check {ENV_API_KEY}.", 401)
     if exc.code == 404:
-        return NotFound(detail or f"{path} not found", 404)
-    return HttpError(f"{method} {path} failed ({exc.code}): {detail}", exc.code)
+        return NotFound(detail or f"{path} not found", 404, raw_detail)
+    return HttpError(f"{method} {path} failed ({exc.code}): {detail}", exc.code, raw_detail)
 
 
 class Backend:
@@ -153,6 +159,29 @@ class Backend:
             raise _http_error(exc, "GET", f"{self._url}{path}") from exc
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             raise Unreachable(f"Could not reach {self._url}: {getattr(exc, 'reason', exc)}") from exc
+
+    def download(self, url: str) -> bytes:
+        """A file the platform signed a URL for (an image of an MCQ bank).
+
+        A signed URL carries its own permission, and storage refuses a request
+        that also sends a bearer token, so the key goes only to the platform's own
+        host. A path (``/media/...``) is taken relative to the website.
+        """
+        site = website_url(self._url)
+        if url.startswith("/"):
+            url = site + url
+        own = url.startswith(site + "/")
+        headers = {"X-Praxis-CLI-Version": __version__}
+        if own:
+            headers["Authorization"] = f"Bearer {self._key}"
+        request = urllib.request.Request(url, method="GET", headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            raise HttpError(f"Downloading {url.split('?')[0]} failed ({exc.code})", exc.code) from exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            raise Unreachable(f"Could not reach {url.split('?')[0]}: {getattr(exc, 'reason', exc)}") from exc
 
     def post_json(self, path: str, payload: Any, timeout: float = 60) -> Any:
         return self._call("POST", path, body=json.dumps(payload).encode(), content_type="application/json",

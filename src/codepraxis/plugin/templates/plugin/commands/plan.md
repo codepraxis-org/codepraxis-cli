@@ -6,7 +6,8 @@ allowed-tools: Read, Glob, Grep, WebFetch, Write, Bash(git clone:*), Bash(codepr
 
 Plan an assessment question for: **$ARGUMENTS**
 
-You write one file, `challenges/<slug>/spec.md`. You do not build anything here.
+You write one file, `challenges/<slug>/spec.md` (`mcq/<slug>/spec.md` for an MCQ
+bank). You do not build anything here.
 
 ## 1. Get the basics
 
@@ -19,7 +20,9 @@ answers, and don't design anything until you have all of them.
 4. **Question kind.** One of:
    - a coding question **without** AI (the candidate works alone),
    - a coding question **with** AI (the candidate has the AI agent),
-   - an **AI interview** question (a conversation, no coding environment).
+   - an **AI interview** question (a conversation, no coding environment),
+   - an **MCQ bank**: multiple-choice questions for a template's Knowledge check
+     round (adaptive, difficulty 1 to 5).
 
 If they aren't sure which kind fits, recommend one from the job description in
 one or two sentences and let them choose.
@@ -31,6 +34,7 @@ one or two sentences and let them choose.
 | Coding without AI | `coding` | `question-coding` |
 | Coding with AI | `coding-ai` | `question-coding-ai` |
 | AI interview | `interview` | `question-interview` |
+| MCQ bank | `mcq` | `question-mcq` |
 
 The skill for the question type they chose says what a good question of that
 type looks like and the rules it must follow. Everything you propose from here on must fit it.
@@ -185,6 +189,32 @@ Never say: <the phrases that would give it away>
 
 ## Timing
 <minutes for the opening question, and for each probe>
+```
+
+For an `mcq` bank, plan the bank, not each question:
+
+```markdown
+---
+question: <slug>
+type: mcq
+category: <existing category slug, or misc>
+position: <position name>
+size: 25                            # at least 3 per difficulty, more at 2 to 4
+---
+
+# <Bank name>
+
+## Covers
+<the sub-topics, each one line, and which difficulties each will have>
+
+## Distribution
+1: 3 · 2: 6 · 3: 7 · 4: 6 · 5: 3
+
+## Sources
+<the real situations the questions come from: a repo, the job description, docs>
+
+## Images
+<which questions need one, and what it shows; none if no question needs one>
 ```
 
 Never write runner vocabulary ("override 2") in the spec; say "By running their

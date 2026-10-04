@@ -20,6 +20,15 @@ your reply**; it is what the author shares.
 - **Interview:** new or changed files in `entities/` are uploaded, then
   `question.json` is saved. The first push writes its `id` into
   `question.json`; later pushes update it.
+- **MCQ bank:** the same checks as `test` run first, and stop the push on any
+  error. New or changed images in `images/` are uploaded, then the bank is saved.
+  **A push replaces the whole bank** (name, description, category, every
+  question); candidates' past attempts keep their own copy. The first push keeps
+  the bank id in `.codepraxis.json`; later pushes replace that bank. If the
+  platform refuses it, every problem is listed: fix them all and push again. A
+  bank has no draft: it is usable as soon as it is pushed. Put the printed link
+  and the count per difficulty in your reply, and say it is used by adding it to a
+  template's Knowledge check round.
 - **A draft** keeps one version, updated by each push. **A published
   question** gets a new version on push, and the CLI says so: candidates get it
   from then on. Push never changes whether a question is live.

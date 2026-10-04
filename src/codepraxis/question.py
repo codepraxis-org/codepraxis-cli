@@ -7,9 +7,12 @@ A question is a folder, ``challenges/<slug>/``:
     ├── pack/          -> candidates         ├── question.json
     └── solution/      never shipped         └── entities/
 
+An MCQ bank is a folder too, ``mcq/<slug>/``: ``bank.json`` (every question),
+``images/`` (every image they use) and ``preview.md`` (written by ``test``).
+
 The CLI keeps ``.codepraxis.json`` in that folder: which container the question
-is open in, and which entity files were uploaded under which id. It holds no
-secrets, and the author can delete it to start fresh.
+is open in, which entity files (or bank images) were uploaded under which id, and
+a bank's id. It holds no secrets, and the author can delete it to start fresh.
 """
 
 from __future__ import annotations
@@ -60,25 +63,36 @@ class Question:
 
     @classmethod
     def find(cls, name: str, cwd: Path | None = None) -> Question:
-        """``name`` is a slug under ``challenges/`` or a path to the folder."""
+        """``name`` is a slug under ``challenges/`` or ``mcq/``, or a path to the folder."""
         cwd = cwd or Path.cwd()
-        for candidate in (Path(name), cwd / name, cwd / "challenges" / name):
-            if candidate.is_dir() and ((candidate / "pack").is_dir() or (candidate / "question.json").is_file()):
+        for candidate in (Path(name), cwd / name, cwd / "challenges" / name, cwd / "mcq" / name):
+            if candidate.is_dir() and any(
+                (candidate / marker).exists() for marker in ("pack", "question.json", "bank.json")
+            ):
                 return cls(candidate.resolve())
         raise PraxisError(
             f"No question '{name}'. Expected challenges/{name}/ with a pack/ folder (coding) "
-            "or a question.json (AI interview)."
+            f"or a question.json (AI interview), or mcq/{name}/ with a bank.json (MCQ bank)."
         )
 
     @property
     def kind(self) -> str:
-        return "interview" if (self.root / "question.json").is_file() else "coding"
+        if (self.root / "question.json").is_file():
+            return "interview"
+        if (self.root / "bank.json").is_file():
+            return "mcq"
+        return "coding"
 
     def require_coding(self, command: str) -> None:
+        if self.kind == "mcq":
+            raise PraxisError(
+                f"`codepraxis {command}` is for coding questions. An MCQ bank has no container: "
+                "use `codepraxis test` to check it and write preview.md, and `codepraxis push` to save it."
+            )
         if self.kind != "coding":
             raise PraxisError(
                 f"`codepraxis {command}` is for coding questions. An AI interview question has no "
-                "container: use `codepraxis test` to check it and `codepraxis publish` to save it."
+                "container: use `codepraxis test` to check it and `codepraxis push` to save it."
             )
 
     # ── coding files ──────────────────────────────────────────────────
@@ -172,6 +186,25 @@ class Question:
             return
         data = {"id": question_id, **{k: v for k, v in data.items() if k != "id"}}
         self.question_json.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+
+    # ── MCQ bank files ────────────────────────────────────────────────
+
+    @property
+    def bank_json(self) -> Path:
+        return self.root / "bank.json"
+
+    @property
+    def images_dir(self) -> Path:
+        return self.root / "images"
+
+    def read_bank(self) -> dict:
+        try:
+            data = json.loads(self.bank_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise PraxisError(f"{self.bank_json} is not valid JSON: {exc}") from exc
+        if not isinstance(data, dict):
+            raise PraxisError(f"{self.bank_json} must be one JSON object with a name and questions.")
+        return data
 
     # ── state ─────────────────────────────────────────────────────────
 

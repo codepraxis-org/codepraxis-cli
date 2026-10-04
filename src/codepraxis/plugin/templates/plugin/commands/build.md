@@ -6,10 +6,12 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(codepraxis:*)
 
 Build the question `$1`.
 
-Read `challenges/$1/spec.md` and follow it; do not redesign it. If the spec is
+Read `challenges/$1/spec.md` (`mcq/$1/spec.md` for an MCQ bank) and follow it;
+do not redesign it. If the spec is
 wrong about something, say so and ask. Read the output file for its type:
 `question-coding/output.md` for `coding` and `coding-ai` questions,
-`question-interview/output.md` for `interview`. It lists the files to produce
+`question-interview/output.md` for `interview`, `question-mcq/output.md` for
+`mcq` (and its `SKILL.md`, for what a good MCQ is). It lists the files to produce
 and the rules they follow.
 
 ## API key
@@ -74,6 +76,16 @@ local files, solution included.
 There is no container. Write `question.json` and put the files it shows in
 `entities/`. Run `codepraxis test $1`: it uploads new or changed files and runs
 the platform's checks. Fix every blocker, then `codepraxis push $1`.
+
+## MCQ banks
+
+There is no container. Write `mcq/$1/bank.json` and put every image it uses in
+`mcq/$1/images/`. Run `codepraxis test $1`: it checks every rule locally (no API
+key needed), warns when a difficulty has fewer than 3 questions, and writes
+`mcq/$1/preview.md`. Fix every error, then read `preview.md` end to end: one
+clearly best answer each, distractors from real mistakes, nothing in the wording
+that points at the key, every image needed. Report when `test` shows no errors and
+the depth warnings are gone (or the author accepts them).
 
 ## Before you stop
 

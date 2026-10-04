@@ -1,7 +1,7 @@
 {
   "name": "codepraxis",
   "description": "Plan, build, test and ship CodePraxis questions inside the same live container a candidate gets.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": {
     "name": "CodePraxis"
   }
