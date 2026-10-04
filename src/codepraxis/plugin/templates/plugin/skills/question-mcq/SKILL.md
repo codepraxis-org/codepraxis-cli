@@ -100,6 +100,27 @@ Prompts and options are Markdown.
   alt text that says what it shows (it is uploaded as the image's description).
 - No PDFs, audio or video in a bank.
 
+## Keeping a bank correct and current
+
+Lessons from the first AI-engineering banks (MCP, LangChain, LangGraph):
+
+- **Run every key you can.** Install the library at the version the stem names, run the
+  snippet, and run the distractors too. A key that only "looks right" is the most common defect.
+- **Name the version when behaviour depends on it** ("LangGraph 1.x", "MCP revision 2025-11-25",
+  "Python SDK 2.x"). An unlabelled stem whose answer changed between versions is wrong for half
+  the candidates.
+- **Test the job, not the changelog.** At most about a third of a bank may hinge on what is new in
+  the latest release, framed as a migration or upgrade problem. The rest must hold across the
+  versions people actually run.
+- **No fragile internals.** Exact default values, the precise nesting order of several wrappers,
+  behaviour only true from one patch version, or behaviour the docs never state are trivia. Ask
+  about the consequence a practitioner must understand instead.
+- **The key must not stand out.** Check option lengths: if the key is the longest option in more
+  than about a third of questions, rebalance. Check that distractors are not ruled out for a
+  reason unrelated to the topic (a parameter that does not exist, a typo).
+- **Have someone else check it.** A second pass that did not write the bank re-runs the keys
+  and looks for a second defensible answer before the bank is pushed.
+
 ## House rules
 
 - **Problem first.** The stem opens on the situation and the question; the
