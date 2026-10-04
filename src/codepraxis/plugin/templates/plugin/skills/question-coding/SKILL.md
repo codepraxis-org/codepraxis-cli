@@ -71,7 +71,8 @@ use, no long explanations, no hints about the fix.
    gets, never a textbook topic.
 2. **Real names.** Tables, APIs, file formats and commands follow the real
    product, so an experienced person feels at home and an inexperienced one is
-   exposed.
+   exposed. Story nouns are the opposite: no company, person or invented product
+   names in the brief or the repo's documents; "your team", "the customer" instead.
 3. **Hidden cases punish the obvious approach.** Messy data and real failure
    sequences are where experience shows. Where it fits, include one adversarial
    case, such as "this isn't in the data, say so".
@@ -124,6 +125,7 @@ Too big: give more in the starter or cut a case. Never raise the time.
 ## Before you propose it
 
 - [ ] The brief states the problem and never names a file or function.
+- [ ] The brief opens on the problem: no company, person or invented product names.
 - [ ] The solution spans two to three files.
 - [ ] There is a twist in the material and two or three real design decisions.
 - [ ] It happened, or plausibly happens, in this job.

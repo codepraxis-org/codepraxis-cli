@@ -148,6 +148,9 @@ Write it like this:
 - Zero information loss: name every file and every step.
 - No answer, and no hint at the answer.
 - Don't open on the company ("Brasswick sells…") or a person; open on the problem.
+- The same holds for `seed_question`, every probe `description`, hints and files: no
+  company, person or invented product names, roles instead; invented ids (ticket,
+  incident, PR numbers) only when the candidate must point into a file.
 
 `signal` is no longer shown; leave it out.
 

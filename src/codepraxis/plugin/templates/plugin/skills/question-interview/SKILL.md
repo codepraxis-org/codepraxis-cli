@@ -61,9 +61,17 @@ well-read candidate talks through.
   interviewer may give go in as "If they ask X: Y".
 - **Every probe adds a file.** New evidence is what moves the story; a probe that
   only asks a new question tests less.
-- **Fictional but plausible.** Invent the company, people, ids and numbers, and
-  check the names aren't real companies or products. Real techniques and tools are
-  named as themselves.
+- **Problem first, no story nouns.** The candidate should understand the problem in
+  30 seconds, then spend the time on the technology. No company, person or invented
+  product names anywhere: seed, probes, hints or files. Use roles ("your team", "the
+  customer", "your manager"). No invented ids (ticket, incident, PR numbers) unless
+  the candidate needs one to point into a file. Plain file names (`incident-ticket.md`,
+  `dashboard.png`), one clock, no time zones unless they matter. Real technology keeps
+  its real name (Oracle EBS, PostgreSQL, pytest).
+- **Files are technical evidence.** Code, logs, data, configs, diagrams, dashboards.
+  A story prop (a voice note, a chat thread, a sales call, an email between people)
+  stays only when it carries a technical fact the candidate needs; otherwise it is one
+  line the interviewer says ("Your manager wants to switch to a bigger model").
 
 ## Use what the candidate can see and do
 
@@ -163,13 +171,14 @@ candidate can read about a page, a chart and a short log in 4 minutes.
 
 ## Before you propose it
 
-- [ ] The seed is a situation from this job, with specific names and numbers.
+- [ ] The seed opens on the problem, with the numbers that matter and no company,
+      person or invented product names (files and probes too).
 - [ ] One chain of three probes, the richest first and the hardest last (or say why
       not).
 - [ ] Every stage's files plant things a strong candidate can find, and the answer
       key names them.
 - [ ] No probe description or hint states what the candidate should find.
-- [ ] Every probe adds at least one file.
+- [ ] Every probe adds at least one file, and every file is technical evidence.
 - [ ] Every probe has an answer a senior person would give.
 - [ ] It fits the time table above.
 - [ ] The page (`description_sections`) is plain English a recruiter follows with no
