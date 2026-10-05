@@ -9,10 +9,12 @@ A question is a folder, ``challenges/<slug>/``:
 
 An MCQ bank is a folder too, ``mcq/<slug>/``: ``bank.json`` (every question),
 ``images/`` (every image they use) and ``preview.md`` (written by ``test``).
+An assessment template is ``templates/<slug>/template.json``: its rounds, and the
+questions in them by platform id or by local folder.
 
 The CLI keeps ``.codepraxis.json`` in that folder: which container the question
-is open in, which entity files (or bank images) were uploaded under which id, and
-a bank's id. It holds no secrets, and the author can delete it to start fresh.
+is open in, which entity files (or bank images) were uploaded under which id, a
+bank's id, and a template's id, version and status. It holds no secrets, and the author can delete it to start fresh.
 """
 
 from __future__ import annotations
@@ -63,16 +65,18 @@ class Question:
 
     @classmethod
     def find(cls, name: str, cwd: Path | None = None) -> Question:
-        """``name`` is a slug under ``challenges/`` or ``mcq/``, or a path to the folder."""
+        """``name`` is a slug under ``challenges/``, ``mcq/`` or ``templates/``, or a path to the folder."""
         cwd = cwd or Path.cwd()
-        for candidate in (Path(name), cwd / name, cwd / "challenges" / name, cwd / "mcq" / name):
+        for candidate in (Path(name), cwd / name, cwd / "challenges" / name, cwd / "mcq" / name,
+                          cwd / "templates" / name):
             if candidate.is_dir() and any(
-                (candidate / marker).exists() for marker in ("pack", "question.json", "bank.json")
+                (candidate / marker).exists() for marker in ("pack", "question.json", "bank.json", "template.json")
             ):
                 return cls(candidate.resolve())
         raise PraxisError(
             f"No question '{name}'. Expected challenges/{name}/ with a pack/ folder (coding) "
-            f"or a question.json (AI interview), or mcq/{name}/ with a bank.json (MCQ bank)."
+            f"or a question.json (AI interview), mcq/{name}/ with a bank.json (MCQ bank), "
+            f"or templates/{name}/ with a template.json (assessment template)."
         )
 
     @property
@@ -81,6 +85,8 @@ class Question:
             return "interview"
         if (self.root / "bank.json").is_file():
             return "mcq"
+        if (self.root / "template.json").is_file():
+            return "template"
         return "coding"
 
     def require_coding(self, command: str) -> None:
@@ -88,6 +94,11 @@ class Question:
             raise PraxisError(
                 f"`codepraxis {command}` is for coding questions. An MCQ bank has no container: "
                 "use `codepraxis test` to check it and write preview.md, and `codepraxis push` to save it."
+            )
+        if self.kind == "template":
+            raise PraxisError(
+                f"`codepraxis {command}` is for coding questions. A template has no container: "
+                "use `codepraxis test` to check its questions and minutes, and `codepraxis push` to save it."
             )
         if self.kind != "coding":
             raise PraxisError(

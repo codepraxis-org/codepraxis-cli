@@ -143,6 +143,8 @@ def describe(result: InstallResult) -> str:
             "  /codepraxis:build     write it, test it, fix it",
             "  /codepraxis:ship      publish as a draft",
             "",
+            "  /codepraxis:assessment  a whole assessment (draft template) from a job description",
+            "",
             "  /codepraxis:try       open it as a candidate would",
             "  /codepraxis:evaluate  is it any good, and can a model beat it",
             "  /codepraxis:edit      change an existing one",

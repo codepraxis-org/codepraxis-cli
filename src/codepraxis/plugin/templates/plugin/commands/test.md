@@ -82,9 +82,24 @@ anything in the wording give the key away, is each image needed to answer, does
 each difficulty match the table in the `question-mcq` skill. Fix `bank.json` and
 test again.
 
+## Templates
+
+```bash
+codepraxis test $1
+```
+
+It resolves every ref in `template.json` (a local folder must have been pushed),
+checks each question or bank is in the library this key can use and not retired,
+that no question appears twice, that code review comes with a coding round, and
+that each round is within the platform's limits. It prints each round's questions
+with their status and minutes, each round's minutes and the total, and lists the
+questions still in draft with `!`: allowed in a draft template, but they must be
+published in the dashboard before the template is. It exits non-zero on any `✗`.
+
 ## Then
 
 Fix what the report shows and rerun until it is clean. Then say in two lines
 what each hidden case catches (or, for an interview, what each probe tests; for
 an MCQ bank, the count per difficulty and what the questions cover),
-and hand off: `/codepraxis:ship $1`.
+and hand off: `/codepraxis:ship $1`. For a template, give the minutes per round
+and the total, and the questions still in draft.

@@ -29,6 +29,13 @@ your reply**; it is what the author shares.
   bank has no draft: it is usable as soon as it is pushed. Put the printed link
   and the count per difficulty in your reply, and say it is used by adding it to a
   template's Knowledge check round.
+- **Template:** every question in `template.json` is checked first (the same as
+  `test`), and any error stops the push. The first push saves a **new draft
+  template** and keeps its id in `.codepraxis.json`; later pushes replace that
+  draft (the platform gives it a new id, which is remembered). Once it has been
+  published in the dashboard, a push publishes its next version at once, and may
+  not hold draft questions. Put the link in your reply, and say: publish its
+  draft questions in the dashboard, then the template.
 - **A draft** keeps one version, updated by each push. **A published
   question** gets a new version on push, and the CLI says so: candidates get it
   from then on. Push never changes whether a question is live.

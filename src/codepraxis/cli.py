@@ -1,26 +1,32 @@
 """The ``codepraxis`` command line.
 
-    codepraxis push    <q>                  save the question to the platform (as a draft); a bank is replaced
-    codepraxis pull    <q|id> [--mcq]       get a question (or, with --mcq, a bank) back from the platform
+    codepraxis push    <q>                  save the question to the platform (as a draft); a bank is replaced;
+                                            a template is saved as a draft (or replaces its draft)
+    codepraxis pull    <q|id> [--mcq|--template]
+                                            get a question (or a bank, or a template) back from the platform
     codepraxis launch  <q> [--fresh]        open it in a container, the way a candidate gets it
     codepraxis exec    <q> "<command>"      run a command there as the candidate (sends changes first)
     codepraxis test    <q> [--visible]      Run, or the starter/solution check (sends changes first);
-                                            for an MCQ bank, the local checks and preview.md
+                                            for an MCQ bank, the local checks and preview.md;
+                                            for a template, every question checked and the minutes per round
+    codepraxis library [--kind K] [--category C] [--q words] [--json]
+                                            the questions and banks a template can use
     codepraxis logs    <q> [source]         setup, grader, exec, run or results
     codepraxis categories                   the categories a public question can go into
     codepraxis stop    <q>                  hand the container back now
 
 The API key comes from ``CODEPRAXIS_API_KEY``. ``<q>`` is a folder under
-``challenges/`` (or ``mcq/`` for an MCQ bank), or a path to one.
+``challenges/`` (``mcq/`` for an MCQ bank, ``templates/`` for a template), or a path to one.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-from . import __version__, coding, interview, mcq, progress
+from . import __version__, coding, interview, mcq, progress, template
 from .errors import PraxisError
 from .platform import Backend
 from .plugin import installer
@@ -42,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     cmd = sub.add_parser("push", help="Save the question to the platform (a draft keeps one version); "
-                                      "an MCQ bank replaces the bank.")
+                                      "an MCQ bank replaces the bank; a template is saved as a draft.")
     cmd.add_argument("question")
     cmd.set_defaults(handler=cmd_push)
 
@@ -51,8 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
     kind = cmd.add_mutually_exclusive_group()
     kind.add_argument("--interview", action="store_true", help="The id is an AI interview question.")
     kind.add_argument("--mcq", action="store_true", help="The id is an MCQ question bank.")
+    kind.add_argument("--template", action="store_true", help="The id is an assessment template.")
     cmd.add_argument("--into", type=Path, help="Folder to write into. Default: challenges/<name> "
-                                                "(mcq/<bank name> for a bank).")
+                                                "(mcq/<bank name> for a bank, templates/<name> for a template).")
     cmd.set_defaults(handler=cmd_pull)
 
     cmd = sub.add_parser("launch", help="Open the pushed question in a container, as a candidate gets it.")
@@ -67,7 +74,8 @@ def build_parser() -> argparse.ArgumentParser:
     cmd.set_defaults(handler=cmd_exec)
 
     cmd = sub.add_parser("test", help="Coding: Run, or starter-fails/solution-passes. Interview: the checks. "
-                                      "MCQ bank: the local checks, and preview.md.")
+                                      "MCQ bank: the local checks, and preview.md. Template: every question "
+                                      "checked, and the minutes per round.")
     cmd.add_argument("question")
     cmd.add_argument("--visible", action="store_true", help="Only the visible cases (the candidate's Run).")
     cmd.set_defaults(handler=cmd_test)
@@ -80,6 +88,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser("categories", help="List the categories a public question can go into.")
     cmd.set_defaults(handler=cmd_categories)
+
+    cmd = sub.add_parser("library", help="List the questions and MCQ banks a template can use.")
+    cmd.add_argument("--kind", choices=template.KINDS, help="Only this kind. Default: all three.")
+    cmd.add_argument("--category", help="Only this category (a slug from `codepraxis categories`).")
+    cmd.add_argument("--q", dest="words", help="Only those whose name or description has these words.")
+    cmd.add_argument("--json", action="store_true", help="Print JSON, with descriptions and topics.")
+    cmd.set_defaults(handler=cmd_library)
 
     cmd = sub.add_parser("stop", help="Hand the container back now instead of after 30 idle minutes.")
     cmd.add_argument("question")
@@ -100,6 +115,11 @@ def cmd_push(args) -> int:
     if q.kind == "mcq":
         mcq.push(q, Backend())
         progress.next_step("add the bank to a template's Knowledge check round on the website.")
+    elif q.kind == "template":
+        result = template.push(q, Backend())
+        progress.next_step("review it in the dashboard; publish its draft questions, then the template."
+                           if template.status_of(result.get("status")) == "draft"
+                           else "set it on a position, or send it, from the dashboard.")
     elif q.kind == "interview":
         interview.save(q, Backend())
     else:
@@ -114,7 +134,7 @@ def cmd_pull(args) -> int:
     folder = Path(args.question)
     existing = None
     for candidate in (folder, Path.cwd() / args.question, Path.cwd() / "challenges" / args.question,
-                      Path.cwd() / "mcq" / args.question):
+                      Path.cwd() / "mcq" / args.question, Path.cwd() / "templates" / args.question):
         if candidate.is_dir():
             existing = Question.find(str(candidate))
             break
@@ -124,6 +144,11 @@ def cmd_pull(args) -> int:
             if not bank_id:
                 raise PraxisError(f"{existing.root / '.codepraxis.json'} has no bank_id: it was never pushed.")
             mcq.pull(backend, int(bank_id), existing.root)
+        elif existing.kind == "template":
+            template_id = existing.state().get("template_id")
+            if not template_id:
+                raise PraxisError(f"{existing.root / '.codepraxis.json'} has no template_id: it was never pushed.")
+            template.pull(backend, int(template_id), existing.root)
         elif existing.kind == "interview":
             question_id = existing.read_question().get("id")
             if not question_id:
@@ -141,6 +166,9 @@ def cmd_pull(args) -> int:
     if args.mcq:
         q = mcq.pull(backend, question_id, args.into)
         progress.next_step(f"`codepraxis test {q.root}` to check it and write preview.md.")
+    elif args.template:
+        q = template.pull(backend, question_id, args.into)
+        progress.next_step(f"`codepraxis test {q.root}` to check its questions and minutes.")
     elif args.interview:
         interview.pull(backend, question_id, args.into or Path.cwd() / "challenges" / f"interview_{question_id}")
     else:
@@ -183,6 +211,15 @@ def cmd_test(args) -> int:
         progress.next_step(f"review {q.slug}/preview.md, then `codepraxis push {q.slug}`." if ok
                            else "fix the errors above and test again.")
         return EXIT_OK if ok else EXIT_FAILED
+    if q.kind == "template":
+        if args.visible:
+            raise PraxisError("--visible is for coding questions.")
+        ok = template.test(q, Backend())
+        published = q.state().get("status") == "published"
+        progress.next_step(f"`codepraxis push {q.slug}` to save it "
+                           + ("(its next version is published at once)." if published else "as a draft.")
+                           if ok else "fix the errors above and test again.")
+        return EXIT_OK if ok else EXIT_FAILED
     if q.kind == "interview":
         if args.visible:
             raise PraxisError("--visible is for coding questions.")
@@ -215,6 +252,16 @@ def cmd_logs(args) -> int:
 def cmd_categories(args) -> int:
     for category in Backend().get("/categories").get("categories", []):
         progress.line(f"{category['slug']:32} {category['name']}")
+    return EXIT_OK
+
+
+def cmd_library(args) -> int:
+    kinds = (args.kind,) if args.kind else template.KINDS
+    found = template.fetch_library(Backend(), kinds, category=args.category, words=args.words)
+    if args.json:
+        print(json.dumps({k: [i.as_json() for i in v] for k, v in found.items()}, indent=2, ensure_ascii=False))
+    else:
+        template.print_library(found)
     return EXIT_OK
 
 

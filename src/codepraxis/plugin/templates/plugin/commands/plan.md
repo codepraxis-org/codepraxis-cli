@@ -7,7 +7,8 @@ allowed-tools: Read, Glob, Grep, WebFetch, Write, Bash(git clone:*), Bash(codepr
 Plan an assessment question for: **$ARGUMENTS**
 
 You write one file, `challenges/<slug>/spec.md` (`mcq/<slug>/spec.md` for an MCQ
-bank). You do not build anything here.
+bank). You do not build anything here. For a whole assessment from a job
+description (several questions in one template), use `/codepraxis:assessment`.
 
 ## 1. Get the basics
 
