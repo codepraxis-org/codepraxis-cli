@@ -233,15 +233,17 @@ class Container:
         self.base_url = base_url.rstrip("/")
         self.folder = folder
 
-    def _url(self, path: str, **params: Any) -> str:
+    def _url(self, route: str, /, **params: Any) -> str:
+        # route is positional-only: callers pass a `path` query parameter of their own.
         query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-        return f"{self.base_url}/uvi{path}" + (f"?{query}" if query else "")
+        return f"{self.base_url}/uvi{route}" + (f"?{query}" if query else "")
 
     def status(self) -> dict:
         return _request("GET", self._url("/author/status", folder=self.folder), timeout=30)
 
     def list_files(self) -> list[dict]:
-        return _request("GET", self._url("/author/files", folder=self.folder), timeout=60).get("files", [])
+        # Images before the backend skipped node_modules hash every file in the workspace; give them time.
+        return _request("GET", self._url("/author/files", folder=self.folder), timeout=300).get("files", [])
 
     def read_file(self, path: str) -> bytes:
         data = _request("GET", self._url("/author/files", folder=self.folder, path=path), timeout=60)

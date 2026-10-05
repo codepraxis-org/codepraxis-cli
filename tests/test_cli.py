@@ -134,6 +134,22 @@ class TestSync:
         assert result.deleted == ["source/output.log"]
         assert not result.setup_changed
 
+    def test_what_setup_and_builds_write_is_never_removed(self, tmp_path):
+        q = _coding_question(tmp_path)
+        local = {p: f.read() for p, f in q.pack_files().items()}
+        generated = ["source/ui/node_modules/rxjs/index.js", "source/Api/bin/Debug/Api.dll", "source/Api/obj/x.json",
+                     "source/ui/.angular/cache/a.json", "source/ui/dist/main.js", "source/db/tickets.db"]
+        container = FakeContainer({**local, **{p: b"built" for p in generated}})
+        assert coding.send_changes(q, container).deleted == []
+
+    def test_file_urls_take_a_path_parameter(self):
+        from codepraxis.platform import Container
+
+        container = Container.__new__(Container)
+        container.base_url = "https://box.example"
+        assert container._url("/author/files", folder="q", path="source/a b.py") == \
+            "https://box.example/uvi/author/files?folder=q&path=source%2Fa+b.py"
+
     def test_grader_files_are_sent_before_the_workspace(self, tmp_path):
         q = _coding_question(tmp_path)
         container = FakeContainer({})

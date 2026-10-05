@@ -289,6 +289,17 @@ def _setup_tail(container: Container) -> str:
 # ── sending changed files ───────────────────────────────────────────────
 
 
+# What setup.sh, a build or the app itself writes into the workspace. It never
+# exists locally, so it is never "extra" and never removed.
+GENERATED_DIRS = frozenset({"node_modules", "bin", "obj", ".angular", ".next", "dist", ".venv", "venv", ".cache"})
+GENERATED_SUFFIXES = (".db", ".db-journal", ".db-wal", ".db-shm", ".sqlite", ".sqlite3", ".tsbuildinfo")
+
+
+def generated(path: str) -> bool:
+    parts = path.split("/")
+    return any(p in GENERATED_DIRS for p in parts[:-1]) or path.endswith(GENERATED_SUFFIXES)
+
+
 @dataclass
 class SyncResult:
     written: list
@@ -313,7 +324,7 @@ def send_changes(q: Question, container: Container) -> SyncResult:
                 written.append(path)
                 s.note(f"sent     {path}")
         for path in sorted(set(remote) - set(local)):
-            if not ignored(path):
+            if not ignored(path) and not generated(path):
                 container.delete_file(path)
                 deleted.append(path)
                 s.note(f"removed  {path}")
