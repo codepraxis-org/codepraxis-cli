@@ -220,7 +220,14 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
     wait_for_setup(container)
     # A container that already had this version keeps its files, and a draft's
     # version id doesn't change when it is re-pushed; make it match local files.
-    send_changes(q, container)
+    synced = send_changes(q, container)
+    # setup.sh already ran, against the restored files (a returning candidate's
+    # `git reset --hard HEAD`, or an older version). If the workspace had to be
+    # corrected, run it again so what it installs matches the question, as on a
+    # candidate's first load. (A changed setup.sh was rerun by send_changes.)
+    setup = q.pack_files().get("setup.sh")
+    if setup and not synced.setup_changed and any(p.startswith("source/") for p in synced.written + synced.deleted):
+        rerun_setup(container, setup.read().decode("utf-8", errors="replace"))
     return Session(container, int(opened["challenge_version_id"]))
 
 
