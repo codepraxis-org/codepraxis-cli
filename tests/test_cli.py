@@ -619,3 +619,30 @@ class TestInterviewFiles:
         ]
         # Pushing straight back uploads nothing.
         assert interview.upload_entities(q, _RecordingBackend(), {"invoice_loader"}) == {"invoice_loader": 5}
+
+
+class TestFreshLaunch:
+    """`launch --fresh` must not quietly reopen the container it was asked to drop."""
+
+    class Backend:
+        def __init__(self, reply):
+            self.reply, self.deleted = reply, []
+
+        def delete(self, path):
+            self.deleted.append(path)
+            return self.reply
+
+    def test_a_release_clears_the_saved_container(self, tmp_path):
+        q = _coding_question(tmp_path)
+        q.save_state(base_url="https://old.example", folder="invoice_rerun")
+        backend = self.Backend({"released": True})
+        coding.release_container(q, backend)
+        assert backend.deleted == ["/container"]
+        assert q.state().get("base_url") is None
+
+    def test_a_kept_container_stops_the_launch(self, tmp_path):
+        q = _coding_question(tmp_path)
+        q.save_state(base_url="https://old.example", folder="invoice_rerun")
+        with pytest.raises(PraxisError, match="did not release your container"):
+            coding.release_container(q, self.Backend({"released": False}))
+        assert q.state().get("base_url") == "https://old.example"

@@ -190,10 +190,9 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
     challenge_id = q.read_publish().get("challenge_id")
     if not challenge_id:
         raise PraxisError(f"'{q.slug}' hasn't been pushed yet. Run `codepraxis push {q.slug}` first.")
+    previous = q.state().get("base_url") if fresh else None
     if fresh:
-        with progress.step("Handing the old container back"):
-            backend.delete("/container")
-        q.save_state(base_url=None, folder=None)
+        release_container(q, backend)
 
     def waiting(elapsed: float) -> str:
         return "a cold start can take up to 3 minutes" if elapsed < 180 else "longer than a usual cold start"
@@ -216,6 +215,8 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
         )
         s.result(f"Opened version {opened['challenge_version_id']} as {folder}")
     progress.line(f"  {opened.get('container_url') or opened['base_url']}")
+    if fresh and previous and opened["base_url"].rstrip("/") == previous.rstrip("/"):
+        progress.line("  Note: this is the same container as before; the platform did not hand out a new one.")
     container = Container(opened["base_url"], folder)
     wait_for_setup(container)
     # A container that already had this version keeps its files, and a draft's
@@ -229,6 +230,23 @@ def launch(q: Question, backend: Backend, *, fresh: bool = False) -> Session:
     if setup and not synced.setup_changed and any(p.startswith("source/") for p in synced.written + synced.deleted):
         rerun_setup(container, setup.read().decode("utf-8", errors="replace"))
     return Session(container, int(opened["challenge_version_id"]))
+
+
+def release_container(q: Question, backend: Backend) -> None:
+    """Hand the key owner's container back, and stop if the platform kept it.
+
+    Opening again after a release that did not happen hands back the same
+    container, which is the one thing ``--fresh`` is asked not to do.
+    """
+    with progress.step("Handing the old container back") as s:
+        result = backend.delete("/container") or {}
+        if result.get("released") is False:
+            raise PraxisError(
+                "The platform did not release your container, so a fresh launch would reopen the "
+                "same one. Try again in a minute; if it keeps happening, tell the CodePraxis team."
+            )
+        s.result("Released")
+    q.save_state(base_url=None, folder=None)
 
 
 def connect(q: Question) -> Session:
